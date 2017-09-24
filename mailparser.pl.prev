@@ -1,0 +1,156 @@
+#!/usr/bin/perl
+#
+# Parse buy/sell alert from IB and store it into transaction table for proper portfolio
+# 
+# message body is 1 line: 
+#   acc      b/s  sym   #  price(s)                  date       time
+#   UXXX973  BOT   K   100@19.41   as  of         2010-10-14 15:58:01
+#   UXXX973 SOLD   G   200@45.34 100@45.34  as of 2012-01-19 10:02:00
+#   ALERT: UXXX973 SOLD RY 100@53.5 as of 2012-02-21 11:16:38
+#
+# CDN stocks only for now!
+# IB portfolio only (portid=38)
+#
+# Oct 2010 by D.O
+# ________________________
+
+use strict;
+use Mail::Internet;
+use Stocks::Portfolio;
+use Data::Dumper;
+my $debug = 1;
+my $stat;
+$|++;
+
+open LOG, '>/var/log/mailparser.log' or die "could not open log file for writing - $! \n";
+print LOG scalar (localtime()), "\n" if $debug;
+
+my $tr = parse_mail();
+$stat = save_tr ($tr) if $tr->{action};
+
+if ($stat) {
+  print LOG "transaction saved \n";
+} else {
+  print LOG "*** transaction was not saved - format errors! \n";
+}
+
+# Check if mail is from correct source and if yes get all the fields
+# ARG: none
+# RET: %tr{ansactisoin} hash
+
+sub parse_mail {
+   my ($from, $to, $subject, $body, %tr);
+   my @mail = <>;
+
+   print LOG 'Raw source: ', join"\n", @mail, "__End_Raw_Source__\n" if $debug;
+   my $mail = Mail::Internet->new(\@mail);
+
+   my $head = $mail->head();
+   chomp ( $from = $head->get('From') );  
+   chomp ( $to = $head->get('To') );  
+   chomp ( $subject = $head->get('Subject') );
+
+   $body =  $mail->body();
+   print Dumper $body;
+   print LOG '__From: ', $from, "\n"; 
+
+   return unless ($from =~ /ctconfirm\@interactivebrokers.com/);
+
+   print LOG "this is email from the right source \n" if $debug;
+   
+   chomp ( $body = ${$mail->body()}[0] );   
+   my @flds  = split ('\s+', $body);
+
+   if ( $debug ){
+      print LOG scalar(localtime()), "\n";
+      print LOG "From: '$from' \n";
+      print LOG "To: '$to' \n";
+      print LOG "Subject: '$subject' \n";
+      print LOG "Body: '$body' \n";
+      print LOG 'parsed fields: ', join'|', @flds, "\n" if $debug;
+   }
+   
+# UXXX973|BOT|K|100@19.41|as|of|2010-10-14|15:58:01
+# UXXX973 SOLD G  200@45.34 100@45.34  as of 2012-01-19 10:02:00
+# ALERT: UXXX973 SOLD RY 100@53.5 as of 2012-02-21 11:16:38
+
+  my $account = $flds[0];
+  return unless ($account =~ /^UXXX\d{3}/);
+
+  $tr{action} = $flds[1];
+  return unless ($tr{action} eq 'BOT' or $tr{action} eq 'SOLD');
+
+  $tr{symbol} = $flds[2];
+  ($tr{number},$tr{price}) = split ('@',$flds[3]);
+  return unless $tr{number} =~ /^\d+/;
+  return unless $tr{price} =~ /^\d+\.?\d*$/;
+
+  if ($flds[4] =~ /'@'/) {
+     ($tr{number2},$tr{price2}) = split ('@',$flds[4]);
+     return unless $tr{number2} =~ /^\d+/;
+     return unless $tr{price2} =~ /^\d+\.?\d*$/;
+     $tr{date} = $flds[7];
+     $tr{time} = $flds[8];
+  } else {
+     $tr{date} = $flds[6];
+     $tr{time} = $flds[7];
+  }
+
+  return unless $tr{date} =~ /\d{4}\-\d{2}\-\d{2}/;
+  return unless $tr{time} =~ /\d{2}:\d{2}:\d{2}/;
+
+  printf LOG ("\n acc: '%s' action : '%s' symbol : '%s' number : '%s' price : '%s' date : '%s' time : '%s' \n", 
+  	  $account,$tr{action},$tr{symbol},$tr{number},$tr{price},$tr{date},$tr{time});
+
+  return \%tr;
+} # check_mail
+
+
+# Save transacttion into DB table
+# ARG: tr hashref
+# RET: status 1:success, 0:failure
+#
+# N.B! For now canadian equities only! For US need to change fees and exchange fields
+#
+sub save_tr {
+   my $tr = shift;
+
+   my %type = ('BOT' => 1, 'SOLD' => -1);
+   my $type = $type{$tr->{action}};
+   my $descr = $tr->{action} . ' ' . $tr->{number} . ' of ' . $tr->{symbol} . ' @ '. $tr->{price};
+   my $descr2 = $tr->{action} . ' ' . $tr->{number2} . ' of ' . $tr->{symbol} . ' @ '. $tr->{price2} if $tr->{number2};
+   my $fees = $tr->{number} * 0.01;
+   my $exchange = 'TSX';
+
+   my $port = Stocks::Portfolio::get (id => 38);
+   my $tro = $port->addTransaction (
+                           'ttype'  =>  1,
+                           'symbol' => uc($tr->{symbol}),
+                           'number' => $tr->{number} * $type,      # -num for sell transactions
+                           'price'  => $tr->{price},
+                           'exchange' => $exchange,
+                           'fx_rate' => 1,
+                           'fees'   => $fees,
+                           'date'   => $tr->{date} . ' '. $tr->{time},
+                           'descr'  => $descr
+                         );
+
+  if ($tr->{number2}) {
+     my $tro = $port->addTransaction (
+                           'ttype'  =>  1,
+                           'symbol' => uc($tr->{symbol}),
+                           'number' => $tr->{number2} * $type,      # -num for sell transactions
+                           'price'  => $tr->{price2},
+                           'exchange' => $exchange,
+                           'fx_rate' => 1,
+                           'fees'   => $fees,
+                           'date'   => $tr->{date} . ' '. $tr->{time},
+                           'descr'  => $descr2
+                         );
+
+  }
+  
+  return 1 if $tro;
+  return;
+} # save_tr
+

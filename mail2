@@ -1,0 +1,32 @@
+From ctconfirm@interactivebrokers.com  Fri Oct 15 12:12:12 2010
+Return-Path: <ctconfirm@interactivebrokers.com>
+X-Original-To: stocks@localhost
+Delivered-To: stocks@localhost
+Received: from tiny.mylan.org (localhost [127.0.0.1])
+        by stocks.perlnow.com (Postfix) with ESMTP id CB5F248F50
+        for <stocks@localhost>; Fri, 15 Oct 2010 10:17:15 -0400 (EDT)
+Received: from perlnow.com [64.62.154.102]
+        by tiny.mylan.org with POP3 (fetchmail-6.3.9-rc2)
+        for <stocks@localhost> (single-drop); Fri, 15 Oct 2010 10:17:15 -0400 (EDT)
+Received: from mx1.interactivebrokers.com ([206.106.137.9]) by perlnow.com for <ib@perlnow.com>; Fri, 15 Oct 2010 07:16:42 -0700
+Received: from gw100.interactivebrokers.com (gw100.interactivebrokers.com [206.106.137.7])
+        by mx1.interactivebrokers.com (Sentrion-MTA-4.0.3/Sentrion-MTA-4.0.3) with ESMTP id o9FEGeYU001755
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-SHA bits=256 verify=NO)
+        for <ib@perlnow.com>; Fri, 15 Oct 2010 10:16:41 -0400
+Received: from ibmkt2 (ibmkt2 [192.9.217.153])
+        by gw100.interactivebrokers.com (8.13.8/8.13.8) with ESMTP id o9F46ms6000538
+        for <ib@perlnow.com>; Fri, 15 Oct 2010 10:16:40 -0400
+Date: Fri, 15 Oct 2010 10:16:40 -0400
+Message-ID: <23815485.1287152200919.JavaMail.ibprod@ibmkt2>
+From: Interactive Brokers <ctconfirm@interactivebrokers.com>
+Reply-To: <donotreply@interactivebrokers.com>
+To: ib@perlnow.com
+Subject: Alert Any Trade (AutoAlert) triggered
+Mime-Version: 1.0
+Content-Type: text/plain
+Content-Transfer-Encoding: 7bit
+X-Copied: Archived
+
+UXXX973 SOLD K  100@19.11  as of 2010-10-16 10:16:40
+
+
