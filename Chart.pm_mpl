@@ -1,0 +1,167 @@
+# Chart generation module. Return images in format specified by
+# CONFIG->{image_format} (not implemented, gif for now)
+#
+# Chart object consists of generic parameters and DATA structure. 
+# Both can be modified by the caller to include data required by specific
+# chart type
+#
+# PIE DATA:    [
+#		 {COLOR => '#AA00FF', VALUE=> 30, CAPTION => 'tech stocks' },
+#	         {COLOR => '#00FF66', VALUE=> 40, CAPTION => '1' }  
+#	       ]; 
+#
+#
+package MPL::Chart;
+use MPL::Config qw($CONFIG);
+#use CGI::LogCarp qw/:STDBUG :STDLOG/;  
+use Carp;
+use strict;
+
+@MPL::Chart::NormalColors = qw( #FF0000 #FFCC00 #009900 #00CCFF #FF6600 #00FF00 #0000FF #FF00FF #9900FF);
+@MPL::Chart::GrowthColors = (
+		{ VALUE => '#F94347', CAPTION => ' Down more than 10%', BRACKET => [-999,-10] }, # 1
+		{ VALUE => '#F25A5D', CAPTION => ' Down 7 - 10%', BRACKET => [-10,-7] },       # 2
+		{ VALUE => '#EA7174', CAPTION => ' Down 5 - 7%', BRACKET => [-7,-5] },	       # 3
+		{ VALUE => '#E3888A', CAPTION => ' Down 3 - 5%', BRACKET => [-5,-3] },	       # 4
+		{ VALUE => '#DB9EA0', CAPTION => ' Down 1 - 3%', BRACKET => [-3,-1] },	       # 5
+		{ VALUE => '#D4B5B6', CAPTION => ' Down less than 1%', BRACKET => [-1,0] },	 #6
+		{ VALUE => '#CCCCCC', CAPTION => ' No Change ', BRACKET => [-0.1,0.1] },     	 #6
+		{ VALUE => '#B7BBD5', CAPTION => ' Up less than 1%', BRACKET => [0,1] },	 #7
+		{ VALUE => '#A2ABDD', CAPTION => ' Up 1 - 3%', BRACKET => [1,3] },		 #8
+		{ VALUE => '#8D9AE6', CAPTION => ' Up 3 - 5%', BRACKET => [3,5] },  		 #9
+		{ VALUE => '#7889EE', CAPTION => ' Up 5 - 7%', BRACKET => [5,7] },		 #10
+		{ VALUE => '#4E68FF', CAPTION => ' Up 7 - 10%', BRACKET => [7,10] },	 	 #11 #637957
+		{ VALUE => '#4E68FF', CAPTION => ' Up more than 10%', BRACKET => [10,999] }	 # 12
+		);
+#                               0      1        2       3       4       5      other                       
+@MPL::Chart::RiskColors = qw(#999999 #4E68FF #8D9AE6 #CCCCCC #E3888A #F94347 #999999);
+$MPL::Chart::OTHER_COLOR = '#C0C0C0';
+
+sub new {
+  my ($class, $type, $data, $title, $xsz, $ysz, $rad) = @_;
+  my $self = {};
+  $self->{TITLE} = $title;
+  $self->{XSZ} = $xsz;
+  $self->{YSZ} = $ysz;
+  $self->{TRANSPARENT} = 1;
+  $self->{BORDER} = undef;
+  $self->{RADIUS} = $rad;
+  $self->{DATA} = $data;
+
+  bless $self, $class;
+  return $self;
+}
+
+# ARGS: change value
+# RETURNS: appropriate color for the value or black if value is in a black
+# hole 
+# VERIFIED: by d.o  Sep 11/00
+#
+sub getGrowthColor {
+my $value = shift;
+foreach my $col (@MPL::Chart::GrowthColors) {
+   if (($value < $col->{BRACKET}[1]) and ($value >= $col->{BRACKET}[0])) {
+       return $col->{VALUE}
+       }
+   }
+# return this if there's hole in colors
+return '#FFFFFF';
+
+}
+
+# Draw a pie
+#________________
+sub Pie {
+  use Chart::ThreeD::Pie;
+  my ($self, $type, $dir, $basename) = @_;
+  my $set = $self->{DATA};
+  my $limit = $self->{LIMIT} || 2;
+
+  my $pie = new Chart::ThreeD::Pie ($self->{XSZ}, $self->{YSZ}, $self->{TITLE});
+    
+  foreach my $p (@$set) {
+    $pie->add ($p->{VALUE}, $p->{COLOR}, $p->{CAPTION});
+    }
+
+# show % after label  caption
+  $pie->percents(1) if $self->{PERCENTS};
+
+# only draw parts greater or equal to 3%. All other parts will be
+# concatenated in to a part called "other" (using $OTHER_COLOR color); 
+
+  $pie->limit ($limit, $MPL::Chart::OTHER_COLOR, 'other');
+
+  $pie->want_sort (1);
+  $pie->thickness ($self->{THICKNESS}) || $self->{YSZ}/10;
+  $pie->fgcolor ($self->{FGCOLOR}) if $self->{FGCOLOR};
+  $pie->bgcolor ($self->{BGCOLOR}) if $self->{BGCOLOR};
+  $pie->border ($self->{BORDER}) if $self->{BORDER};
+  $pie->transparent(1) if $self->{TRANSPARENT};
+
+  $pie->radius($self->{RADIUS});
+#   $pie->xmax(600);
+#   $pie->ymax(800);
+
+    $self->_create_file ($pie->plot->png, $dir, $basename);
+} #Pie
+
+# Create GIF file in standard location using passed string
+# File name is unique (almost) for any given day
+# RETURNS: GIF file basename
+# ARGS: contents of GIF file (string)
+#
+sub _create_file {
+my ($self, $gif, $dir, $basename) = @_;
+
+if (!defined $basename) {
+  $dir = $CONFIG->{dirs}{tmpimages}.'/' unless defined $dir;
+  map{$basename.=$_} (localtime)[0..2];
+  $basename .= (int rand 10000).'.gif';
+}
+
+open PIE, ">".$dir.$basename || croak "Could not open pie file ";
+print PIE $gif;
+close PIE;  
+
+return  $basename;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+MPL::Chart Chart creation methods
+
+=head1 SYNOPSIS
+Uses: Chart::ThreeD::Pie
+
+$chart = new MPL::Chart($type, $data, $title, $xsz, $ysz);
+
+Supports only pie charts for now
+2 global structures: MPL::Chart::GrowthColors: color signifies change in stock
+value from red (worst) to green (best).
+
+=head1 INTERFACE
+
+=head2 MPL::Chart::Pie( )
+
+Creates 3DPie Chart object and puts it into GIF field
+
+=head2 MPL::Chart::_create_file( )
+
+Generates file in $CONFIG->{dirs}{tmpimages}; Internal method used by Pie
+
+=head2 MPL::Chart::getGrowthColor( )
+
+Returns color for given bracket. Colors are in global structure
+MPL::Chart::GrowthColors;
+
+
+=head1 AUTHOR
+
+Dimitri Ostapenko (dimitrio@perlnow.com)
+
+=cut
+
