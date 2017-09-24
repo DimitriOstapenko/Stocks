@@ -1,0 +1,112 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$show => undef
+</%args>
+
+
+<div id="inside">
+<table class='mainTable'>
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+   <th>This Month</th>
+   <th>Last Month</th>
+   <th>This Quarter</th>
+   <th>Last Quarter</th>
+   <th>This Year</th>
+   <th>Last Year</th>
+</tr>
+</thead>
+
+% my $height = %$ports*41;  #74
+
+%# $m->print (scalar keys %$ports,':' );
+
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+
+if ($port->currency eq 'USD') {
+    $fx_rate = $usdcad;
+} elsif ($port->currency eq 'EUR') {
+    $fx_rate = $eurcad;
+} else {
+    $fx_rate = 1;
+} 
+
+$mondep = $port->getDeposits(tframe => 'mtd') * $fx_rate;
+
+$lmondep = $port->getDeposits (tframe => 'lmo') * $fx_rate;
+$qtrdep = $port->getDeposits (tframe => 'qtd') * $fx_rate;
+$lqtrdep = $port->getDeposits (tframe => 'lqtr') * $fx_rate;
+
+$yrdep  = $port->getDeposits (tframe => 'ytd') * $fx_rate;
+$lyrdep  = $port->getDeposits (tframe => 'lyr') * $fx_rate;
+
+$ttlmondep += $mondep;
+$ttllmondep += $lmondep;
+$ttlqtrdep += $qtrdep;
+$ttllqtrdep += $lqtrdep;
+$ttlyrdep += $yrdep;
+$ttllyrdep += $lyrdep;
+
+$ttl_cashin += $port->cashin * $fx_rate;
+</%perl>
+<tr>
+<td><b><a href="deposits.mas?portid=<% $port->id %>"><% $port->name %></b></a></td>
+<td><% sprintf ("%-8.0f", $mondep) %></td>
+<td><% sprintf ("%-8.0f", $lmondep) %></td>
+<td><% sprintf ("%-8.0f", $qtrdep) %></td>
+<td><% sprintf ("%-8.0f", $lqtrdep) %></td>
+<td><% sprintf ("%-8.0f", $yrdep) %></td>
+<td><% sprintf ("%-8.0f", $lyrdep) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttlmondep) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllmondep) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlqtrdep) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllqtrdep) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlyrdep) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllyrdep) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+Total all-time deposits : <b>$<% sprintf("%-8.0f",$ttl_cashin) %></b> CAD
+
+</div>
+
+<div class="footer_text" style="float:right; font-style: italic; color: #333;">
+* All values shown are in base currency (CAD)
+</div>
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+use List::Util qw[min max];
+
+my $USER = $m->comp ('auth.mas');
+
+$m->redirect("deposits.mas?portid=$portid") if $portid;
+
+my ($mondep,$lmondep,$qtrdep,$lqtrdep,$yrdep,$lyrdep,$ttlmondep,$ttllmondep,$ttlqtrdep,$ttllqtrdep,$ttlyrdep,$ttllyrdep,$ttl_cashin,$fx_rate);
+my $usdcad = Stocks::Utils::get_usdcad;
+my $eurcad = Stocks::Utils::get_eurcad;
+
+my $ports = $USER->getPortfolios(activeonly => 1, type => $show);
+
+return unless $ports;
+
+</%init>
+

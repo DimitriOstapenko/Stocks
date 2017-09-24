@@ -1,0 +1,55 @@
+<%args>
+$active => undef
+$email_flag => undef
+$cashonly => undef
+$portid => undef
+</%args>
+
+<form id="ports">
+<table class="mainTable" style="width:400px" align="center">
+<thead class="Header">
+<tr>
+   <th>Name</th>
+   <th>Active</th>
+   <th>Email</th>
+   <th>Cash Only</th>
+</tr>
+</thead>
+
+% my $height = (keys %$ports)*37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+% my $port = Stocks::Portfolio::get ( id => $id);
+  <tr>
+  <td><% $port->name %></td>
+  <td><input name="active" type="checkbox" value="<% $port->id %>" <% $port->active ? 'checked':'' %>/></td>
+  <td><input name="email_flag" type="checkbox" value="<% $port->id %>" <% $port->email_flag ? 'checked':'' %>/></td>
+  <td><input name="cashonly" type="checkbox" value=<% $port->id %> <% $port->cashonly ? 'checked':'' %>/></td>
+  </tr>
+% }
+</tbody>
+
+</table>
+</form>
+
+<script>
+$('#ports input:checkbox').click( function(e){
+//      alert($(this).prop("name") + ':' + $(this).val());
+    $(this).load("./saveport.pl", { id: $(this).val(), name: $(this).prop("name"), val: $(this).is(':checked')});
+}
+)
+</script>
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+use Data::Dumper;
+
+my $USER = $m->comp ('auth.mas');
+my $usdcad = Stocks::Utils::get_usdcad;
+my $ports = $USER->getPortfolios() if ref $USER;
+
+return unless $ports;
+
+</%init>

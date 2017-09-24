@@ -1,0 +1,55 @@
+<%doc>
+Add new company to dividend table
+</%doc>
+
+<%args>
+$symbol => undef
+$exchange => undef
+$value =>undef
+$frequency => undef
+$submit => undef
+</%args>
+
+<form>
+<table class="mainTable" style="text-align: left; line-height: 2.5em; width:300px"> 
+
+<tr><td> Symbol:  </td><td><input type='text' name='symbol' size=6 class="Form"></td></tr> 
+
+<tr><td> Exchange: </td>
+<td>
+<select name='exchange' class="Form">
+<option value='TSX' selected='yes'>TSX</option>
+<option value='NYSE'>NYSE</option>
+<option value='NASD'>NASD</option>
+<option value='AMEX'>AMEX</option>
+</select>
+</td></tr> 
+
+<tr><td> $ Value :  </td><td><input type='text' name='value' size=6 class="Form"></td></tr> 
+<tr><td> Frequency (pmnt/yr):  </td><td><input type='text' name='frequency' size=6 class="Form"></td></tr> 
+<tr><td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+</table>
+
+<%init>
+use Stocks::Dividend;
+
+my $USER = $m->comp('auth.mas');
+
+if ( $submit ) {
+   do {$m->print("symbol is required"); return} unless $symbol;
+   do {$m->print("value is required"); return} unless $value;
+   do {$m->print("frequency is required"); return} unless $frequency;
+
+   my $div = Stocks::Dividend->new ( 
+			   'symbol' => uc $symbol,
+			   'exchange' => $exchange,
+			   'value' => $value,
+			   'frequency' => $frequency,
+                         );
+ 
+   $div->save;
+
+   $m->redirect ('manageDividends.mas');
+}
+
+</%init>

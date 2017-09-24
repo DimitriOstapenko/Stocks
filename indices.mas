@@ -1,0 +1,43 @@
+<span id="indices">
+
+TSX: <% sprintf("%+8.0f", $tsx->net) %> 
+DOW: <% sprintf("%+8.0f", $dow->net*100) %>
+Gold: <% sprintf("%8.2f", $gold->price) %> 
+USD/CAD: <% sprintf("%5.3f", $usdcad->price) %> 
+EUR/CAD: <% sprintf("%5.3f", $eurcad->price) %>
+%#NASD: <% sprintf("%8.0f", $nasd->price) %> 
+
+</span>
+
+<%init>
+ use Stocks::Config qw($CONFIG);;
+ use Stocks::Quote;
+ use Stocks::Utils;
+ use Date::Manip;
+
+ my ($indices, $price, $net);
+
+ unless ($indices = $m->cache->get('quotes_indices')) {
+
+    my $ind = $CONFIG->{indices};
+    $indices = {(
+		 tsx => Stocks::Quote::get( symbol=> $ind->{tsx}{symbol}, exchange => $ind->{tsx}{exchange}),
+ 		 dow => Stocks::Quote::get( symbol=> $ind->{dow}{symbol}, exchange => $ind->{dow}{exchange}),
+# 		 nasd => Stocks::Quote::get( symbol=> $ind->{nasd}{symbol}, exchange => $ind->{nasd}{exchange}),
+ 		 usdcad => Stocks::Quote::get( symbol=> $ind->{usdcad}{symbol}, exchange => $ind->{usdcad}{exchange}),
+ 		 eurcad => Stocks::Quote::get( symbol=> $ind->{eurcad}{symbol}, exchange => $ind->{eurcad}{exchange}),
+ 		 crude => Stocks::Quote::get( symbol=> $ind->{crude}{symbol}, exchange => $ind->{crude}{exchange}),
+ 		 gold => Stocks::Quote::get( symbol=> $ind->{gold}{symbol}, exchange => $ind->{gold}{exchange}),
+	       )};
+   $m->cache->set("quotes_indices" => $indices, '+1m');
+ }
+
+my $tsx = $indices->{tsx} || 0;
+my $dow = $indices->{dow} || 0;
+#my $nasd = $indices->{nasd} || 0;
+my $usdcad = $indices->{usdcad} || 1;
+my $eurcad = $indices->{eurcad} || 1;
+my $crude = $indices->{crude};
+my $gold = $indices->{gold} || 0;
+
+</%init>

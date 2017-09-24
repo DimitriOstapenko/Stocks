@@ -1,0 +1,14 @@
+<%args>
+$symbol
+</%args>
+
+<a href='http://markets.ft.com/research/Markets/Tearsheets/Summary?s=<% $symbol %>:<% $exch{$exchange} %>' target='_new'>FT Overview</a><p>
+
+<%init>
+my $exchange;
+($symbol,$exchange) = split(':',$symbol);
+$exchange ||= 'TSX';
+my %exch = ( 'NASD' => 'NMQ', 'NYSE' => 'NYQ', 'AMEX' => 'ASQ', 'TSX' => 'TOR');
+$symbol =~ s/\-/\./g;
+
+</%init>

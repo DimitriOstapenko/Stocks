@@ -1,0 +1,134 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$showgain => undef
+$year => undef
+</%args>
+
+<form>
+<select name="year" class="DropDown" onChange="form.submit()">
+<option value="<% $thisyr %>"><% $thisyr %></option>
+% foreach my $yr ( reverse ($thisyr-4..$thisyr-1)){
+  <option value=<% $yr %> <% $yr eq $year ? "selected='yes'" :'' %>><% $yr %></option>
+%}
+</select>
+</form>
+
+    <table align='left'>
+      <tr><td><& perf_chart.mas, year => $yr &> </td></tr>
+    </table>
+
+<table class='mainTable' style="font-size:12px" >
+<thead class="Header">
+<tr>
+   <th>Portf.</th>
+% foreach my $mon ($thismon..12,1..$thismon) {
+    <th><% Stocks::Utils::getMonthName (numon =>$mon, abbrev => 1) %></th>
+% }
+</tr>
+</thead>
+
+% my $height = %$ports*44; my $width = 920;
+<tbody class="Content" style="height: <%$height%>; width:<%$width%>;"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+$lyr = $port->getMonthTotals ( year => $year-1, month => 12);
+$lyrttlval += $lyr->equity + $lyr->cash;
+$rgain += $port->getTtlGain( sdate=> $sdate, edate=> $edate);
+
+foreach my $mon ($thismon..12) {
+  $ttl = $port->getMonthTotals ( year => $year-1, month => $mon);
+  $val{$mon.'_'} = $ttl->equity + $ttl->cash;
+  $ttlval{$mon.'_'} += $val{$mon.'_'};
+}
+
+foreach my $mon (1..$thismon) {
+  $ttl = $port->getMonthTotals ( year => $year, month => $mon);
+  $val{$mon} = $ttl->equity + $ttl->cash;
+  $ttlval{$mon} += $val{$mon};
+}
+
+# is this 1-st of the month and ttls are not in db yet?
+
+unless ($val{$thismon}) {
+  my $lmonval = $thismon >1 ? $val{$thismon-1} : $lyr->equity + $lyr->cash;
+  $ttlval{$thismon} += $lmonval;
+}
+</%perl>
+
+<tr>
+<td><a href="performance.mas?portid=<% $id %>"><b><% $port->name %></b></a></td>
+% foreach my $mon ($thismon..12) {
+  <td><% sprintf ("%-8.0f", $val{$mon.'_'}) %></td>
+% }
+% foreach my $mon (1..$thismon) {
+  <td><% sprintf ("%-8.0f", $val{$mon}) %></td>
+% }
+</tr>
+
+% $ttl_cashin += $port->cashin;
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+% my $sp = '&nbsp;';
+<td><% $sp x 10 %> </td>
+% foreach my $mon ($thismon..12) {
+   <td>$<% sprintf ("%-8.0f", $ttlval{$mon.'_'}) %></td>
+%} 
+% foreach my $mon (1..$thismon) {
+   <td>$<% sprintf ("%-8.0f", $ttlval{$mon}) %></td>
+%} 
+</tr>
+</tfoot>
+
+</table>
+
+<div class='spacer'></div>
+<i>* End of month total values are shown </i><p></p>
+Total invested : <b>$<% sprintf("%-8.0f",$ttl_cashin) %></b> CAD<br>
+% my $chg = $ttlval{$thismon} - $lyrttlval;
+Change over previous year: <b>$<% sprintf("%-8.0f",$chg) %></b> CAD 
+% my $pcchng = $lyrttlval ? $chg/$lyrttlval*100 : 0;
+(<% $lyrttlval ? sprintf("%-6.2f",$pcchng) : 0 %>%)<br>
+Deposited This Year: <b>$<% $USER->getDeposits(tframe => 'ytd') %> CAD </b> <br>
+Real Gain This Year: <a href='allperformance.mas?showgain=1'><b>$<% sprintf("%-8.0f",$rgain) %></b> CAD</a>
+
+<div class="spacer"> </div>
+<div style="position: absolute; top:0px; left: 400px; color:green">
+  <b> YTD: <% sprintf("%+7.0f", $chg).' ('.sprintf("%-6.2f",$pcchng) %>%)</b>
+</div>
+
+% if ( $showgain ) {
+
+  <& "show_all_real_gain.mas", showgain=> $showgain, $year=> $year &>
+
+% }
+
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+
+my $USER = $m->comp ('auth.mas');
+
+$m->redirect("performance.mas?portid=$portid") if $portid;
+
+my $thisyr = Stocks::Utils::thisyr;
+my $yr = $year if $year && $year < $thisyr;
+$year ||= $thisyr;
+my $thismon = $year == $thisyr ? Stocks::Utils::thismon() : 12;
+
+my $ports = $USER->getPortfolios(activeonly => 1);
+return unless $ports;
+
+my ($ttl, %val, %ttlval, $ttl_cashin, $lyr, $lyrttlval, $rgain);
+my $sdate = $year.'-01-01';
+my $edate = ($year+1).'-01-01';
+</%init>
+

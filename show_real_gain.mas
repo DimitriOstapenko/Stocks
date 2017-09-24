@@ -1,0 +1,47 @@
+<%args>
+$portid => undef
+</%args>
+
+<table class='mainTable' style="width:260px">
+<thead class="Header">
+<tr>
+   <th>Symbol**</th>
+   <th>Gain/Loss</th>
+</tr>
+</thead>
+
+% my $height = scalar(keys %rgain)*37;
+<tbody class="Content" style="height: <%$height%>;"> 
+
+% foreach my $sym ( sort keys %rgain ) {
+% $ttlrgain += $rgain{$sym};
+<tr>
+<td><% $sym %></td>
+<td><% sprintf ("%-8.0f", $rgain{$sym}) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttlrgain) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+<%init>
+use Stocks::Portfolio;
+my $ttlrgain;
+my $USER = $m->comp ('auth.mas');
+
+my $port = Stocks::Portfolio::get (id => $portid);
+return unless $port;
+
+my %rgain = $port->getRealGain();
+
+</%init>
+

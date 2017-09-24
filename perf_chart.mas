@@ -1,0 +1,108 @@
+<%args>
+$year => undef 
+$month => undef
+$port => undef
+</%args>
+
+<%doc>
+Create year graph if year is passed
+Creater month graph if month and year are passed
+Show 12 month back from now by default
+Show portfolio graph if $port is set, all portfolios otherwise
+</%doc>
+
+<div align='left'><img src='/charts/performance.png'></div>
+
+<%init>
+use Chart::Lines;
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+my ($sdate,$edate,$nextmonth,$day,$totals) = (undef)x5;
+
+if ( $year ) {
+   if ( $month ) {				# yr&mon - show 1 mon graph
+      $nextmonth = $month + 1;
+      $sdate = $year.'-'.$month.'-01'; 
+      if ($nextmonth > 11 ) {
+         $nextmonth = 1;
+         $year++;
+      }
+      $edate = $year.'-'.$nextmonth.'-01';
+  } else {					# yr only - show ytd graph
+      $sdate = $year.'-01-01'; 
+      $edate = ($year+1).'-01-01';
+  }
+} else {					# no yr - show 12 mon back from now graph
+      $year  = (localtime())[5] + 1900;
+      $month = (localtime())[4] + 1;
+      $day   = (localtime())[3];
+      $sdate = ($year-1).'-'.$month.'-'.$day;
+      $edate = $year.'-'.$month.'-'.$day;
+}
+
+my $USER = $m->comp('auth.mas');
+
+if ( $port ) {
+   $totals = $port->getTotals (sdate => $sdate, edate => $edate );
+} else {
+   $totals = $USER->getTotals (sdate => $sdate, edate => $edate ); 
+}
+
+return unless @$totals;
+
+my @labels;
+if ( $month ) {
+#  @labels = map {(split ('-', $_->[2]))[1]} @$totals;     # show days only
+   @labels = map {$_->[2]} @$totals;     # show days only
+} else {
+  @labels = map {$_->[0]} @$totals;
+}
+
+my @dataset = map {$_->[1]/1000} @$totals;
+my @data = ( \@labels, \@dataset );
+
+my $png_width = 920;
+my $png_height = 210;
+
+my $obj = Chart::Lines->new ( $png_width, $png_height );
+my $portname = $port->name. ' : ' if $port;
+
+my %options  = (
+		'title' => $portname .$sdate .' - '.$edate, 
+		'title_font' => GD::Font->MediumBold,
+		'grid_lines' => 'true',
+#		'y_grid_lines' => 'true',
+#		'x_grid_lines' => 'true',
+		'transparent' => 'true', 
+		'png_border' => 15, 
+		'graph_border' => 0, 
+#		'x_label' => 'Time',
+		'y_label' => 'Portfolio Value (in 000)',
+		'legend' => 'none',
+#		'y_axes' => 'both',
+		'precision' => 1,
+		'tick_len' => 4,
+#		'pt_size' => 2,
+		'brush_size' => 5,
+		'grey_background' => 'false',
+		);
+
+$options{'skip_x_ticks'} = @dataset<32 ? 2:21;
+
+my $colors = {
+	       'background' => [0,0,0],
+# 	       'title' => [150,150,150],
+	       'text' => [255,255,255],
+	       'x_label' => [150,150,255],
+	       'y_label' => [255,255,255],
+	       'dataset0' => [2,200,2],
+	       'grid_lines' => [178,178,178],
+	     };
+
+$obj->set (%options);
+$obj->set ( colors =>  $colors );
+
+$obj->png ( "/home/stocks/public_html/charts/performance.png", \@data );
+
+</%init>

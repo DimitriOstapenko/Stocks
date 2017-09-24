@@ -1,0 +1,66 @@
+<%args>
+$show => 'active'
+$port => undef
+</%args>
+
+<%doc>
+show: active: only show quotes for positions with equity
+show: recent: show recent quotes for all positions (including those once owned but sold) sorted from high to low total value
+</%doc>
+<div class="spacer"></div>
+
+<table class="mainTable">
+
+<thead class="Header">
+<tr>
+<th> Sym. </th>
+<th> Price </th>
+<th> Chg </th>
+<th> %Chg </th>
+<th> High </th>
+<th> Low </th>
+<th> Volume </th>
+<th> Avg Volume </th>
+</tr>
+</thead>
+
+% my $height = max(@$symbols*37,220);
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $pos ( @$symbols ) {
+%   $q = Stocks::Quote::get (symbol =>  $pos->{symbol}, exchange => $pos->{exchange});
+%   next unless $q;
+<tr>
+    <td><a href='quotes.mas?symbol=<% $q->symbol %>&exchange=<% $q->exchange %>'><% $q->symbol %></a></td>
+    <td><% sprintf ("%8.2f", $q->price) %></td>
+    <td><% sprintf ("%8.2f", $q->net) %></td>
+    <td><% sprintf ("%8.2f", $q->p_change) %></td>
+    <td><% sprintf ("%8.2f", $q->high) %></td>
+    <td><% sprintf ("%8.2f", $q->low) %></td>
+    <td><% Stocks::Utils::commify($q->volume) %></td>
+    <td><% Stocks::Utils::commify($q->avg_vol) %></td>
+</tr>
+%}
+</tbody>
+
+</table>
+
+</div>
+
+<%init>
+use Stocks::User;
+use Stocks::Quote;
+use List::Util qw[min max];
+
+my $USER = $m->comp('auth.mas');
+my ($q, $class, $volume, $avgvol, $symbols);
+my $with_equity_or_not = ($show eq 'active')? 1 : 0;
+
+if ( $port ) {
+   $symbols = $port->getSymbols ( activeOnly => $with_equity_or_not );
+} else {
+   $symbols = $USER->getSymbols ( activeOnly => $with_equity_or_not );
+}
+
+my $scroll = @$symbols > 23;  # 13 !
+</%init>

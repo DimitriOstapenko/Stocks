@@ -1,0 +1,59 @@
+<%args>
+$fees
+$othfees => 0
+$portid
+</%args>
+
+<table class="mainTable" style="width:550px" align="center">
+
+<thead class="Header">
+<tr>
+   <th>Symbol</th>
+   <th># Trades</th>
+   <th>Amount</th>
+   <th><a href="/addTransaction6.mas?portid=<% $portid %>" id="new_trans">
+   <img class='add' src='/images/plus.png' alt='Add' title='Add'>
+   </a></th>
+</tr>
+</thead>
+
+% my $height = @$fees*37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% my $i = 0;
+% foreach my $fee ( @$fees ){
+% $ttlamount += $fee->{sum}; 
+% $ttlcount += $fee->{count}; $i++;
+  <tr>
+    <td><a href="trades.mas?portid=<% $portid %>&symbol=<% $fee->{symbol} %>"><% $fee->{symbol} %></a></td>
+    <td><% sprintf ("%6i", $fee->{count}) %></td>
+    <td><% sprintf ("%-8.2f", $fee->{sum}) %></td>
+    <td>&nbsp;</td>
+  </tr>
+
+% }
+</tbody>
+
+<tfoot class="Footer">
+  <tr>
+  <td></td>
+  <td><% sprintf ("%6i", $ttlcount) %></td>
+  <td><% sprintf ("%-8.2f", $ttlamount) %></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<div>
+Other Fees: <% $othfees %>
+</div>
+
+</div>
+
+<%init>
+my ($ttlcount, $ttlamount, $dt, $class);
+$othfees ||= 0;
+
+</%init>
+
+

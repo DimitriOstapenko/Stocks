@@ -1,0 +1,79 @@
+<%args>
+$port
+</%args>
+
+<%doc>
+Show cash holdings for all-cash portfolio 
+</%doc>
+
+<table class="mainTable" style="width:550px" align="center">
+<thead class="Header">
+
+<tr>
+   <th>Currency</th>
+% if ($port->currency() eq 'GLD') {
+   <th>Weight</th>
+% }
+   <th>Invested</th>
+   <th>Cur. Value</th>
+% if ($port->currency() eq 'GLD') {
+   <th>Cost/g CAD</th>
+% } else {
+   <th>Interest </th>
+% }
+</tr>
+</thead>
+
+<tbody class="Content" style="height: 37px"> 
+<tr>
+  <td><% $port->currency() %></td>
+% if ($port->currency() eq 'GLD') {
+   <td><% sprintf ("%8.3f", $port->weight()) %></td>
+% }
+  <td><% sprintf ("\$%-8.0f", $cashin) %></td>
+  <td><% sprintf ("\$%-8.0f", $ttlcurval) %></td>
+% if ($port->currency eq 'GLD') {
+  <td> <% sprintf("%6.2f",$port->cashin()/$port->weight()) %></td>
+% } else {
+  <td><% sprintf ("\$%-8.0f", $int ) %></td>
+% }
+</tr>
+</tbody>
+
+<tfoot class="Footer">
+
+</tfoot>
+
+<p>
+<tr align="left"><td>
+<div class="footer_text">
+Invested : <b><% sprintf ("%-8.0f", $cashin) . $currency %>; &nbsp;</b>
+% if ($ttlcurval > 0) {
+  Return : <b>$<% sprintf ("%-8.0f", $return ) %>(<% sprintf ("%-4.2f%", ($return/$cashin)*100) %>) ; </b>  &nbsp;
+% }
+Y/Y change: <b><% sprintf ("\$%-8.0f", $ttlcurval - $ttllyrval) %></b> 
+; XAUUSD : $<% Stocks::Utils::get_gold() %> <% sprintf ("%-5.3f", Stocks::Utils::get_gold_gr()) %> USD/gr
+
+</div>
+</td></tr>
+
+</table>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+do {$m->print ("please select portfolio"); return; } unless $port;
+
+my $usdcad = Stocks::Utils::get_usdcad;
+my $ttlcurval = $port->curvalue();
+my $cashin = $port->cashin;
+my $return = $ttlcurval - $port->cashin;
+my $ttllyrval = $port->getLyrValue();
+$ttllyrval /= $port->fx_rate() unless ($port->currency eq 'CAD');  # convert back to portfolio currency
+
+my $int = $port->getInterest ( 'all' );
+my $currency = $port->currency();
+$currency = 'CAD' if $port->currency eq 'GLD';
+
+</%init>

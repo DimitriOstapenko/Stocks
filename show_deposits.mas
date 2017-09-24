@@ -1,0 +1,103 @@
+<%args>
+$trans
+$ttype
+$port
+</%args>
+
+<table class="mainTable" style="width:760px;" align="center">
+<thead class="Header">
+
+<tr>
+   <th>Date</th>
+%  if ($port->currency() eq 'GLD') {
+   <th>Weight (g)</th>
+   <th>Price/g</th>
+%   $curr = 'CAD';
+% }
+   <th>Amount (<% $curr %>) </th>
+%  if (!$port->cashonly) {
+   <th>Alt Cur</th>
+% }
+   <th style="width:300px;">Note</th>
+   <th style="width:30px;"><a href="addTransaction<% $ttype %>.mas?portid=<% $port->id %>" id="new_trans">
+    <img class="add" src='/images/plus.png' alt='Add' title='Add'></a></th>
+</tr>
+</thead>
+
+% my $height = min($trcount*80,560);
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $t ( @$trans ){
+    
+% if ($port->currency() eq 'CAD' ) {
+%     if ($t->exchange() eq 'TSX') {
+%	 $base = $t->number; $alt = 0;
+%	 $ttlbase += $base
+%     } else {
+%	 $alt = $t->number; $base=0;
+%	 $ttlalt += $alt
+%     }
+%  } elsif ($port->currency() eq 'USD') {
+%      if ( $t->exchange eq 'NYSE' ) {
+%	 $base = $t->number; $alt=0;
+%	 $ttlbase += $base 
+%      } else {
+%	 $alt = $t->number; $base = 0;
+%	 $ttlalt += $alt
+%      }
+%  } elsif ($port->currency() eq 'EUR') {
+%       $base = $t->number; $alt=0; $ttlbase += $base;
+%  } elsif ($port->currency eq 'GLD') {
+%       $base = $t->number; $alt=0; $ttlbase += $base; 
+%       $ttlweight += $t->weight();
+%  }
+
+% ($dt) = split (' ', $t->date) if $t->date;
+  <tr>
+    <td><% $dt %></td>
+% if ($port->currency() eq 'GLD') {
+    <td> <% $t->weight %> </td>
+    <td> <% sprintf ("%8.2f",$base/$t->weight) %> </td>
+% }
+    <td> <% $base %> </td>
+% if (!$port->cashonly) {
+    <td> <% $alt %> </td>
+% }
+    <td style="width:300px;"><% $t->descr || '&nbsp;' %></td>
+    <td style="width:30px;"> <A href='editTransaction<% $ttype %>.mas?portid=<% $port->id %>&id=<% $t->id %>'>
+    <img class="edit" src='/images/edit.png' alt='Edit' title='Edit'>
+    </a></td>
+  </tr>
+
+% }
+</tbody>
+
+<tfoot class="Footer" >
+  <tr>
+  <td></td>
+% if ($port->currency() eq 'GLD') {
+    <td><%sprintf("%-8.2f", $ttlweight) %> </td>
+    <td></td>
+% }
+  <td><% sprintf ("%-8.0f", $ttlbase) %></td>
+% if (!$port->cashonly) {
+  <td><% sprintf ("%-8.0f", $ttlalt) %></td>
+% }
+
+% if ($port->currency() eq 'GLD') {
+  <td><% sprintf("%8.3f",$ttlbase/$ttlweight) %>/g</td>
+% }
+  <td></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<%init>
+use List::Util qw[min max];
+my ($base, $alt, $ttlbase, $ttlalt, $ttlweight, $dt, $class);
+my $trcount =  scalar @$trans;
+my $curr = $port->currency();
+</%init>
+
+

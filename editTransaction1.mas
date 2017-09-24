@@ -1,0 +1,182 @@
+<%args>
+$id => undef
+$portid => 0
+$year => undef
+$mon => undef
+$day => undef
+$time => undef
+$symbol => undef
+$shares => undef
+$type => undef
+$exchange => undef
+$price => undef
+$fxrate => undef
+$fees => undef
+$descr => undef
+$save => undef
+$delete => undef
+</%args>
+
+<div id="page_header">
+  Edit Trade
+</div>
+
+<form  id="edit" method="get">
+<input type='hidden' name='portid' value=<% $portid %>>
+<input type='hidden' name='id' value=<% $id %>>
+<input type='hidden' id="brokerid" name='brokerid' value=<% $brokerid %>>
+
+<div align=center>
+<table class="mainTable" style="width:700px; text-align: left; line-height: 2.2em;"> 
+
+<tr><td> Type: </td>
+<td> 
+<input type='radio' class="BuySell" name='type' value=1 <% $tr->number>0 ?'checked':'' %>>Buy</input>
+<input type='radio' class="BuySell" name='type' value=-1  <% $tr->number<0 ?'checked':'' %>>Sell</input>
+</td></tr>
+
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $tmon)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$mon[$tmon]] ) {
+    <option value='<% $day %>'<% ($day == $tday)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $tyr)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+Time: <input type="text" name="time" size=5 value=<% $thr.':'.$tmin %> class="Form"> 
+</td></tr>
+
+<tr><td> Symbol: </td><td><input type='text' name='symbol' size=7 value=<% $tr->symbol %> class="Form"> </td></tr>
+<tr><td> Exchange: </td><td>
+<select id="exch" name='exchange' class="Form">
+% foreach my $x ( @exch ) {
+   <option value='<% $x %>' <% $x eq $tr->exchange ? 'selected':'' %>> <% $x %> </option>
+% }
+</select>
+</td></tr> 
+
+<tr><td> Shares: </td><td><input type='text' id='shares'  name='shares' size=7 value=<% abs int $tr->number %> class="Form"></td></tr>
+<tr><td> Price:  </td><td><input type='text' name='price' size=7 value=<% sprintf "%-8.4f", $tr->price %> class="Form"></td></tr> 
+<tr><td> Fees:  </td><td><input type='text' id='fees' name='fees' value=<% sprintf "%-6.2f", $tr->fees %> size=7 value=<% $tr->fees %> class="Form"></td></tr>
+<tr><td> Comment:  </td><td><% $tr->descr %></td></tr> 
+
+<%doc> 
+<tr><td> Comment:  </td><td><input type='text' name='descr' size=30 value="<% $tr->descr %>" class="Form"></td></tr> 
+</%doc>
+
+<%doc>
+<tr><td><input type="submit" name="save2" value="Save" class="Form"></td>
+<td><input type="submit" name="delete2" value="Delete" class="Delete"></td>
+</%doc>
+
+<input type="hidden" name='save' value=''>
+<input type="hidden" name='delete' value=''>
+</tr>
+
+</table>
+
+<table style="width:700px;"> 
+<tr>
+<td>
+ <div class="button">
+   <div class="glare" id='Save'></div>
+     <font color='blue'>Save</font>
+ </div>
+</td>
+
+<td>
+ <div class="button" id='Delete'>
+   <div class="glare"></div>
+     <font color=red>Delete</font>
+ </div>
+</td>
+</tr>
+
+</table>
+
+</form>
+</div>
+
+<script>
+$("#shares").change( function(e){
+        $.get('./getfees.pl?shares='+$(this).val()+'&id='+$('#brokerid').val()+'&exch='+$('#exch').val(), function(data){$('#fees').val(data.fees);});
+}
+)
+
+$("#exch").change( function(e){
+        $.get('./getfees.pl?exch='+$(this).val()+'&id='+$('#brokerid').val()+'&shares='+$('#shares').val(), function(data){$('#fees').val(data.fees);});
+}
+)
+
+$('#Save').click(function(e) {
+    $('input[name=save]').val('Save');
+    $('#edit').submit(); 
+});
+
+$('#Delete').click(function(e) {
+    $('input[name=delete]').val('Delete');
+    $('#edit').submit(); 
+});
+</script>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Transaction;
+use Stocks::Utils;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+my $tr = Stocks::Transaction::get (id => $id);
+
+my $dtime = $tr->date;
+my ($tdate,$ttime) = split(' ',$dtime);
+my ($thr,$tmin) =  split(':',$ttime);
+
+my ($tyr,$tmon,$tday) = split ('-', $tdate);
+
+my @exch = ('TSX', 'NYSE', 'AMEX', 'NASD');
+my $days = [{"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, {"Apr"=>30}, {"May"=>31}, {"Jun"=>30}, {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30}, {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($tyr, $tyr-1, $tyr-2, $tyr-3);
+
+my $brokerid = $port->brokerid();
+
+if ( $delete ) {
+   $port->dropTransaction ('tr' => $tr);
+   $m->redirect ('trades.mas?portid='.$portid.'&tframe=td');
+}
+
+if ($save) {
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+      my $suff = ' '.$shares .' '. $symbol.' @ '.sprintf("%-6.2f",$price);
+      my $descr = ($type>0)? 'BOT'.$suff:'SOLD'.$suff;
+      $port->addTransaction (
+   			   'id' => $id,
+			   'ttype'  =>  1,				   # we only handle type 1 (buy/sell) here
+                           'symbol' => uc($symbol),
+                           'number' => $shares*$type, 			   # -num for sell transactions
+                           'price'  => $price,
+			   'portid' => $portid,
+                           'exchange' => $exchange,
+			   'fx_rate' => $fxrate || 1,
+ 		           'fees'   => $fees,
+                           'date'   => $datetime,
+			   'descr'  => $descr
+		         );
+   $m->redirect ('trades.mas?portid='.$portid.'&tframe=td');
+}
+
+</%init>

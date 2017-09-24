@@ -1,0 +1,92 @@
+<%args>
+$year => undef
+$port => undef
+</%args>
+
+<%doc>
+ Shows this year monthly performance with values as of end of each month
+</%doc>
+
+Real Gain: <b>$<% sprintf ("%-8.0f", $rgain) %></b> <br>
+
+<table class="mainTable">
+<thead class="Header">
+<tr>
+   <th>Month</th>
+   <th>Cash</th>
+   <th>Equity</th>
+   <th>Total</th>
+   <th>Depos.</th>
+   <th>P/L</th>
+   <th>%P/L (-dep)</th>
+</tr>
+</thead>
+
+% my $height = @data*37;
+<tbody class="Content" style="height: <% $height %>"> 
+% foreach my $dt ( @data ) {
+%  $mon++;
+%  next unless $dt->{cash} || $dt->{equity};
+%  $ttl = $dt->{cash} + $dt->{equity}; 
+%  $prevttl = $prevdt->{cash} + $prevdt->{equity} if $prevdt; 
+%  $deposits = $port->getMonthTotalDep ( year => $year, month => $mon );
+%  $ttldeposits += $deposits;
+%  $transfers = $port->getMonthTotalTransf ( year => $year, month => $mon );
+%  $ttltransfers += $transfers;
+%  $P_L = $ttl - $prevttl - $deposits - $transfers;
+%  $ttlP_L += $P_L;
+%  $mon_name = Stocks::Utils::getMonthName (numon => $mon);
+   <tr>
+     <td><a href="performance.mas?portid=<% $port->id %>&year=<% $year %>&month=<% $mon %>"><% $mon_name %></a></td>
+     <td><% sprintf ("%-8.2f", $dt->{cash}) %></td>
+     <td><% sprintf ("%-8.2f", $dt->{equity}) %></td>
+     <td><% sprintf ("%-8.2f", $ttl) %></td>
+     <td><% sprintf ("%-8.2f", $deposits ) %></td>
+     <td><% sprintf ("%-8.2f", $P_L ) %></td>
+     <td><% $prevttl ? sprintf ("%-8.2f", ($ttl - $prevttl - $deposits - $transfers )/($prevttl+$transfers)*100):'' %></td>
+   </tr>
+%  $prevdt = $dt;
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttldeposits) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlP_L) %></td>
+<td><% sprintf ("%-5.2f%", $ttlP_L/$ttlcurval*100) %></td>
+</tr>
+</tfoot>
+</table>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::DailyTotals;
+use Stocks::Utils;
+
+my ($ttl, $prevttl, $mon_name, $mon, $ttldeposits, $ttltransfers, $P_L, $ttlP_L ) = (undef) x 7; 
+my (@data, $full_month_name);
+my ($deposits, $transfers);
+my $thisyr = Stocks::Utils::thisyr;
+$year ||= $thisyr;
+my $thismon = $year == $thisyr ? Stocks::Utils::thismon() : 12;
+
+my $sdate = $year.'-01-01'; 
+my $edate = ($year+1).'-01-01';
+my $rgain = $port->getTtlGain(sdate => $sdate, edate => $edate);
+my $ttlcurval = $port->getCurVal( year => $year ) || 1;
+
+# Dec last year
+my $prevdt = $port->getMonthTotals ( year => $year-1, month => 12 );
+
+foreach my $mon ( 1..$thismon ) {
+  push (@data, $port->getMonthTotals ( year => $year, month => $mon ));
+}
+
+return unless @data;
+
+</%init>

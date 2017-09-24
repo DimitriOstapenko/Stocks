@@ -1,0 +1,56 @@
+<%args>
+$username => undef
+$password => undef
+$referrer => undef
+</%args>
+
+<div style="position:fixed; width:200px; left:40%; top:30%">
+
+% if ( !$USER && $username ) {
+<div style="position:fixed; top:65%"> Authorization failure. Please try again: </div>
+% }
+
+<form method='post' class='login'>
+<input type="hidden" name="referrer" value="<%$referrer%>">
+
+<div style=" line-height: 2em;">
+ <div>Username: <input name="username" class='login'> </div>
+ <div class="spacer"></div>
+ <div>Password: <input name="password" type="password" class='login'> </div>
+</div>
+ 
+ <div class="button">
+   <div class="glare"></div>
+     Log In
+ </div>
+
+</form>
+
+   <div style="position:relative; top: 50px;"> 
+     Not registered? Click <a href='/register.mas'>here</a>
+   </div>
+
+%# jquery stuff
+<script>
+$('.button').click(function() {
+    $('.login').submit(); 
+});
+</script>
+
+<%init>
+use Stocks::User;
+
+$referrer = '/ipad';
+
+if ($username) { 
+# try to log in; get real user if authenticated, 'nobody' otherwise
+  my $user = Stocks::User::login (username => $username, password => $password);
+  if ( $user->username eq 'nobody' ) {
+     $USER = $m->session->{USER} = undef;
+  } else {
+     $USER = $m->session->{USER} = $user;
+     $m->redirect( $referrer );
+  }
+}
+
+</%init>

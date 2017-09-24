@@ -1,0 +1,128 @@
+<%doc>
+Edit Interest
+</%doc>
+
+<%args>
+$portid => undef
+$id => undef
+$cash => undef
+$year => undef
+$mon => undef
+$day => undef
+$fx_rate => 1
+$descr => undef
+$submit => undef
+$delete => undef
+</%args>
+
+<form>
+<input type='hidden' name='id' value=<% $id %>>
+<input type='hidden' name='portid' value=<% $portid %>>
+
+<div id="page_header">
+  Edit Interest :
+</div>
+
+<table class="mainTable" style="text-align: left; line-height: 2.2em;"> 
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $tmon)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$tmon-1] ) {
+    <option value='<% $day %>'<% ($day == $tday)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $tyr)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+</td></tr>
+
+<tr><td> Interest amount:  </td><td><input type='text' name='cash' size=5 class="Form" value="<% $tr->cash %>"></td></tr> 
+
+<tr><td> Currency: </td>
+<td>
+<select name='currency' class="Form">
+<option value='CAD' <% $currency eq 'CAD' ? "selected='yes'":''%>>CAD</option>
+<option value='USD' <% $currency eq 'USD' ? "selected='yes'":''%>>USD</option>
+</select>
+</td></tr> 
+
+<tr><td> Comment:  </td><td><input type='text' name='descr' size=30 class="Form" value="<% $tr->descr %>"></td></tr> 
+<tr><td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+</table>
+
+<p>
+Check to delete this transaction: <input type='checkbox' name='delete' value='1'>
+</p>
+
+</form>
+
+<%init>
+use Stocks::Transaction;
+use Stocks::Portfolio;
+
+do { $m->print("portid is required"); return;} unless $portid;
+my $USER = $m->comp('auth.mas');
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+my $tr = Stocks::Transaction::get (id => $id);
+my $currency = ($tr->exchange eq 'NYSE') ? 'USD':'CAD';
+
+do{$m->print("trasaction $id does not exist"); return; } unless $tr;
+
+my $dtime = $tr->date;
+my ($tdate,$ttime) = split(' ',$dtime);
+my ($tyr,$tmon,$tday) = split ('-', $tdate);
+
+($ttime) = $ttime =~ /^(\d{2}\:\d{2})/;
+
+my $days = [
+	    {"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, 
+	    {"Apr"=>30}, {"May"=>31}, {"Jun"=>30},
+	    {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30},
+	    {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}
+	   ];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($tyr, $tyr-1, $tyr-2, $tyr-3);
+my $exch = $currency eq 'CAD' ? 'TSX':'NYSE';
+
+if ( $submit ) {
+   do{$m->print("amount is required"); return; } unless $cash;
+
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' 00:00';
+   if ($delete) {
+      $port->dropTransaction ('tr' => $tr);
+   } else {
+
+   $port->addTransaction ( 'id' => $id,
+   			   'ttype'  =>  3, 
+   			   'ttype_str' => 'CASH',
+			   'symbol' => 'cash',
+                           'number' => 1,
+                           'price'  => $cash,
+			   'fx_rate' => 1,
+                           'date'   => $datetime,
+                           'descr'  => $descr,
+			   'exchange' => $exch,
+                         );
+ 
+   }
+   $m->redirect ('interest.mas?portid='.$portid);
+}
+
+</%init>

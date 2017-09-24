@@ -1,0 +1,126 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$show_symdiv => undef
+</%args>
+
+<div id="inside">
+
+<table class="mainTable">
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+   <th>This Month</th>
+   <th>Last Month</th>
+   <th>This Quarter</th>
+   <th>Last Quarter</th>
+   <th>This Year</th>
+   <th>Last Year</th>
+</tr>
+</thead>
+
+% my $height = %$ports * 37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+next if $port->cashonly();
+$fx_rate = ($port->currency eq 'USD') ? $usdcad : 1;
+
+$mondiv = $port->getDividends ( tframe => 'mtd' ) * $fx_rate;
+$lmondiv = $port->getDividends ( tframe => 'lmo' ) * $fx_rate;
+$qtrdiv = $port->getDividends ( tframe => 'qtd' ) * $fx_rate;
+$lqtrdiv = $port->getDividends ( tframe => 'lqtr' ) * $fx_rate;
+$yrdiv  = $port->getDividends ( tframe => 'ytd' ) * $fx_rate;
+$lyrdiv = $port->getDividends ( tframe => 'lyr') * $fx_rate;
+$ttlpdiv = $port->getDividends ( tframe => 'all') * $fx_rate;
+
+$ttlmondiv += $mondiv;
+$ttllmondiv += $lmondiv;
+$ttlqtrdiv += $qtrdiv;
+$ttllqtrdiv += $lqtrdiv;
+$ttlyrdiv += $yrdiv;
+$ttllyrdiv += $lyrdiv;
+$ttldiv += $ttlpdiv;
+
+</%perl>
+
+<tr>
+<td><a href="dividends.mas?portid=<% $port->id %>"<b><% $port->name %></b></a></td>
+<td><% sprintf ("%-8.0f", $mondiv) %></td>
+<td><% sprintf ("%-8.0f", $lmondiv) %></td>
+<td><% sprintf ("%-8.0f", $qtrdiv) %></td>
+<td><% sprintf ("%-8.0f", $lqtrdiv) %></td>
+<td><% sprintf ("%-8.0f", $yrdiv) %></td>
+<td><% sprintf ("%-8.0f", $lyrdiv) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttlmondiv) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllmondiv) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlqtrdiv) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllqtrdiv) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlyrdiv) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllyrdiv) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+Total all-time dividends : <b>$<% sprintf("%-8.0f", $ttldiv ) %></b> CAD <br>
+Total receivable dividends for this year excluding future DRIPS : 
+<b> <a href="alldividends.mas?show_symdiv=1"><% '$'.int($ttl) %></a></b><br>
+
+% if ( $show_symdiv ) {
+% foreach my $sym (sort keys %div) {
+   <% $sym %> : <% $div{$sym} %> <br>
+% }
+%}
+
+</div>
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+use Stocks::Dividend;
+use List::Util qw[min max];
+
+$m->redirect ('dividends.mas?portid='.$portid) if $portid;
+my $USER = $m->comp ('auth.mas');
+
+my ($mondiv,$lmondiv,$qtrdiv,$lqtrdiv,$yrdiv,$lyrdiv, $ttlpdiv, $ttldiv, $fx_rate,
+    $ttlmondiv,$ttllmondiv,$ttlqtrdiv,$ttllqtrdiv,$ttlyrdiv,$ttllyrdiv);
+
+my $usdcad = Stocks::Utils::get_usdcad;
+my $ports = $USER->getPortfolios(activeonly => 1, equityonly => 1);
+
+return unless $ports;
+
+my $holdings = $USER->getHoldings;
+my %syms =  map{split(':',$_) } keys %$holdings;  # symbol => portid
+my %ttlshares;
+
+# calculate total shares in each position
+foreach my $id ( sort keys %$ports ) {
+   foreach my $sym (sort keys %syms ) {
+     my $pos = $$holdings{$sym.':'.$id};
+     $ttlshares{$sym} += $pos;
+   }
+}
+
+my ($div,%div,$ttl);
+foreach my $sym ( sort keys %ttlshares ) {
+   $div = Stocks::Dividend::find ( field => 'symbol', value => $sym, type => 'Str' );
+   $div{$sym} = $div->[0]{value} * $ttlshares{$sym} if $div->[0]{value};
+   $ttl += $div{$sym};
+}
+
+</%init>
+

@@ -1,0 +1,139 @@
+<%doc>
+Cash Transaction
+</%doc>
+
+<%args>
+$portid => 0
+$cash => undef
+$weight => undef
+$year => undef
+$mon => undef
+$day => undef
+$time => undef
+$fx_rate => 1
+$currency => 'CAD'
+$modcashin => 1
+$descr => undef
+$submit => undef
+</%args>
+
+
+<div id="page_header"> Cash Deposit </div> 
+
+<form>
+<input type='hidden' name='portid' value=<% $portid %>>
+
+<table class="mainTable" style="text-align: left; line-height: 2.5em; width:650px"> 
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $monow)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$monow-1] ) {
+    <option value='<% $day %>'<% ($day == $daynow)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $yrnow)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+Time: <input type="text" name="time" size=5 value=<% $timenow %> class="Form"> 
+</td></tr>
+
+% if ($port->currency() eq 'GLD') {
+<tr><td> Weight (g) :  </td><td><input type='text' name='weight' size=8 class="Form"></td></tr> 
+% }
+
+<tr><td> Cash amount:  </td><td><input type='text' name='cash' size=8 class="Form"></td></tr> 
+
+%#<tr><td> Add to total Cash In for this portfolio?: </td><td><input type='checkbox' name='modcashin' value='Y'></td></tr> 
+<tr><td> Comment:  </td><td><input type='text' name='descr' size=40 class="Form"></td></tr> 
+<tr><td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+
+</table>
+
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Transaction;
+
+do { $m->print("portid is required"); return;} unless $portid;
+my $USER = $m->comp('auth.mas');
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+my $symbol = 'cash';
+$symbol = 'GLD' if $port->currency() eq 'GLD';
+
+my @ts = localtime();
+my $timenow = sprintf("%02d",$ts[2]). ':' . sprintf("%02d", $ts[1]);
+my $daynow = $ts[3];
+my $monow  = $ts[4] + 1;
+my $yrnow  = $ts[5] + 1900;
+
+my $days = [
+	    {"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, 
+	    {"Apr"=>30}, {"May"=>31}, {"Jun"=>30},
+	    {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30},
+	    {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}
+	   
+	   ];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($yrnow, $yrnow-1,$yrnow-2,$yrnow-3);
+my $exch;
+my ($cashin_base, $cashin_alt);
+
+#if ( $port->currency eq 'CAD' ) {
+#   if ($currency eq 'CAD') {
+#      $exch = 'TSX';
+#      $cashin_base=$port->cashin_base + $cash;
+#   } else {
+#      $exch = 'NYSE';
+#      $cashin_alt = $port->cashin_alt + $cash;
+#   }
+#} else {  # US Portfolio
+#   if ($currency eq 'USD') {
+#      $exch = 'NYSE';
+#      $cashin_base = $port->cashin_base + $cash;
+#   } else {
+#      $exch = 'TSX';
+#      $cashin_alt = $port->cashin_alt + $cash;
+#   }
+#}
+
+# Ignore alt for now. Most portfolios have only one currency
+
+$cashin_base = $port->cashin_base + $cash;
+
+$port->cashin_base($cashin_base);
+$port->cashin_alt($cashin_alt);
+
+if ( $submit ) {
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+   $port->addTransaction ( 'ttype'  =>  0, 
+   			   'ttype_str' => 'CASH',
+			   'symbol' => $symbol,
+                           'number' => $cash,
+                           'price'  => 1, 
+			   'fx_rate' => 1,
+                           'date'   => $datetime,
+                           'descr'  => $descr,
+			   'exchange' => 'TSX',
+			   'weight' => $weight
+                         ) if $cash;
+ 
+   $port->save if $modcashin;
+
+   $m->redirect ('deposits.mas?portid='.$portid);
+}
+
+</%init>

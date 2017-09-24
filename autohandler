@@ -1,0 +1,55 @@
+<%args>
+$portid => undef
+$symbol => undef
+$exchange => undef
+$tframe => undef
+$show => 'all'
+</%args>
+
+<%flags>
+inherit => undef
+</%flags>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html charset=utf-8" />
+<title><% $title %></title>
+<link rel="stylesheet" title="Main" type="text/css" href="/styles/ipad.css">
+<link rel="icon" href="favicon.ico">
+<link rel="shortcut icon" href="favicon.ico">
+<script src="/js/jquery-latest.js"></script>
+<!-- script language=javascript src="/js/prototype.js"></script> -->
+<script type="text/javascript" src="/js/stripedTable.js"></script>
+
+<script type="text/javascript" 
+  src="liveprices.goldmoney.com/xau.js">
+</script>
+
+</head>
+<body>
+
+<div id="page">
+ <div id="header">
+  <& header.mas, user => $user, port => $port, tframe=> $tframe, symbol => $symbol, show => $show &>
+ </div>
+ <div id="mainframe"> 
+%    $m->call_next(port => $port);
+ </div>
+ <div id="footer">
+    <& footer.mas &>
+ </div>
+</div>
+
+</body>
+</html>
+
+<%once>
+use Stocks::User;
+use Stocks::Portfolio;
+</%once>
+
+<%init>
+my $title = 'Stocks! - stocks.perlnow.com';
+my $user = $m->session->{USER};
+my $port = Stocks::Portfolio::get ( id => $portid) if $portid;
+</%init>
+

@@ -1,0 +1,80 @@
+<%args>
+$port
+</%args>
+
+% foreach my $ass ( @{$port->assets} ){
+
+<%perl>
+  my $shares = $ass->{number};
+  next unless $shares>0; 
+  
+  my $quote = Stocks::Quote::get ( symbol => $ass->{symbol}, exchange => $ass->{exchange} );
+  next unless defined $quote && $quote->last;
+
+# Calculate Todays gain/loss for this sym:
+
+  $todaygain = 0; 
+  $todaygain = ($quote->last - $quote->close)*$shares if Stocks::Utils::monToFri();
+  $todaygain *= $fx_rate; 
+  $ttldaygain += $todaygain;
+
+</%perl>
+
+% }
+ 
+
+<%perl>
+$ttlcurval = $port->curvalue() * $fx_rate;
+
+if ($port->cashonly()) {
+   $ttldaygain = $ttlcurval - $port->getPrevVal(); 
+}
+
+$ttlgain = $port->cashonly ? $port->curvalue()  - $port->cashin : $port->curpgain();
+$ttlgainpc = ($ttlgain / $equity)*100 if $equity;
+$ttldaygainpc = ($ttldaygain / $equity) * 100 if $equity && Stocks::Utils::monToFri;
+</%perl>
+
+<tr>
+  <td><a href='holdings.mas?portid=<%$port->id%>&tframe=ytd'><span class='portname'><% $port->name %></span></a></td>
+  <td>$<% sprintf ("%-8.0f", $ttlcurval) %></td>
+  <td>$<% sprintf ("%-8.0f", $port->cashin * $fx_rate) %></td>
+  <td>$<% sprintf ("%-8.0f", $ttlgain) %></td>
+  <td><% sprintf ("%5.2f%", $ttlgainpc) %></td>
+  <td><% $ttldaygain ? sprintf ("%8.2f", $ttldaygain) : '-' %></td>
+  <td><% $ttldaygainpc ? sprintf ("%5.2f%", $ttldaygainpc) : '-' %></td>
+  <td><% $port->yrgain ? sprintf ("%5.0f", $port->yrgain) : '0' %></td>
+  <td><% int $port->cash %></td>
+</tr>
+
+<%perl>
+  $ret->{curval} = $ttlcurval;
+  $ret->{daygain} = $ttldaygain;
+  $ret->{gain} = $ttlgain;
+  return $ret;
+</%perl>
+
+<%once>
+use Stocks::Quote;
+use Stocks::Portfolio;
+use Stocks::Utils;
+use List::Util qw[min max];
+</%once>
+
+<%init>
+
+do {$m->print ("Please select portfolio"); return; } unless $port;
+
+my  $fx_rate = ($port->currency eq 'CAD') ? 1 : $port->fx_rate();
+my ($todaygain, $gain, $todaygainpc, $curval, $class, $ret, $trclass,
+   $ttlcost, $ttlgain, $ttlgainpc, $ttldaygain, $ttldaygainpc, $ttlcurval, $tdnum);
+
+my $cash = $port->cash;
+my $equity = $port->equity;
+$equity = $cash if $port->cashonly();
+my $tdtrades = $port->getTodaysTrades();
+#my %tdrgains = $port->getRealGain ( sdate => Stocks::Utils::today() );
+
+$ttlcurval = $ttlgain = $ttldaygain = 0;
+
+</%init>

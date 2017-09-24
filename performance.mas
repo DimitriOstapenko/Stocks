@@ -1,0 +1,63 @@
+<%args>
+$portid => undef
+$year => undef
+$month => undef
+</%args>
+
+<form>
+<input type='hidden' name='portid' value='<% $portid %>'>
+Year:
+<select name='year' onChange="form.submit()" class="Form">
+% for (my $yr=$thisyr; $yr>$thisyr-5; $yr--){
+ <option value=<% $yr %> <% $yr eq $year?"selected='yes'":''%>><% $yr %></option>
+%}
+</select>
+</form>
+
+<table align='center'>
+      <tr><td><& perf_chart.mas, year => $year, month => $month, port => $port &> </td></tr>
+</table>
+
+<p>
+%       if ($year == $thisyr) {
+           <font size='2'>As of 5pm on latest tr. day:
+           Total Invested: $<% sprintf ("%-8.0f", $port->cashin) %>;
+	   Current Value: $<% sprintf ("%-8.0f", $ttlcurval) %>; 
+           Return: $<% sprintf ("%-8.0f", ($ttlcurval - $port->cashin)) %>(<% sprintf ("%+5.2f", ($ttlcurval - $port->cashin)/$port->cashin*100) %>%) ;
+	   Paper P/L : $<% sprintf("%-8.0f", $pprpl) %> (<% sprintf("%+5.2f", $pprpl/$port->equity*100)%>)
+	   </font>
+%       }
+</p>
+
+<table align="center">
+<tr><td>
+
+% if  ( $month ) {
+  <& show_mon_performance.mas, year => $year, month => $month, port => $port &>
+% } else {
+
+  <& show_yr_performance.mas, year => $year, port => $port &>
+%} 
+
+</td>
+</tr>
+</table>
+
+<%init>
+use Stocks::DailyTotals;
+my $thisyr = (localtime())[5] + 1900;
+$year ||= $thisyr;
+
+my $USER = $m->comp('auth.mas');
+$m->redirect('allperformance.mas') unless $portid;
+
+do{$m->print('Please select portfolio'); return} unless $portid;
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+# Portfolio value as of 5 pm this/last night
+my $ttlcurval = $port->getCurVal();
+my $pprpl = $port->getTtlPprGain();
+</%init>

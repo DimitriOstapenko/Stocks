@@ -1,0 +1,126 @@
+<%args>
+$tframe => undef
+$show => 'all'
+</%args>
+
+<table class="mainTable">
+<thead class="Header">
+<tr>
+   <th></th>
+   <th>Value (CAD)</th>
+   <th>Invested</th>
+   <th>Ppr $P/L </th>
+   <th>%P/L </th>
+   <th>Day P/L</th>
+   <th>%Day P/L</th>
+   <th>Yr R.Gain</th>
+   <th>Cash</th>
+</tr>
+</thead>
+
+% my $height = (keys %$ports)*37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+
+$port = Stocks::Portfolio::get ( id => $id);
+if ($port->cashonly()) {
+    next if $stockonly
+} else { 
+    next if $cashonly
+}
+
+$fx_rate = ($port->currency eq 'CAD') ? 1 : $port->fx_rate();
+
+#next unless $port->cashin > 1;
+my $totals =  $m->comp('show_summary.mas',  port => $port );
+
+$ttl_cash += $port->cash * $fx_rate;
+$ttl_equity += $port->_equity * $fx_rate;
+$ttl_curval += $totals->{curval};
+$ttl_invested += $port->cashin * $fx_rate;
+$ttl_day_gain += $totals->{daygain} if Stocks::Utils::monToFri();
+$ttl_gain += $totals->{gain};
+$ttl_cashin += $port->cashin * $fx_rate;
+
+# $m->print($port->name,':',$port->cashin * $fx_rate, ':', $fx_rate, '<br>' );
+
+$ttlrgain += $port->yrgain * $fx_rate;
+</%perl>
+
+% }
+</tbody>
+
+% $ttl_cashin  ||= 1;
+% $ttl_day_gainpc = ($ttl_day_gain/$ttl_curval)*100 if Stocks::Utils::monToFri() && $ttl_curval;
+
+<tfoot class="Footer">
+<tr>
+<td>&nbsp;</td>
+<td>$<% sprintf ("%-8.0f", $ttl_curval) %></td>
+<td>$<% sprintf ("%-8.0f", $ttl_invested) %></td>
+<td>$<% sprintf ("%-8.0f", $ttl_gain) %></td>
+<td><% $ttl_equity ? sprintf ("%6.2f%", $ttl_gain/$ttl_invested*100):0 %></td>
+<td><% $ttl_day_gain ? sprintf ("\$%-8.0f", $ttl_day_gain) : '&nbsp;' %></td>
+<td><% $ttl_day_gainpc ? sprintf ("%+6.2f%", $ttl_day_gainpc) : '&nbsp;' %></td>
+<td><% sprintf ("\$%-6.0f", $ttlrgain) %></td>
+<td><% sprintf ("\$%-6.0f", $ttl_cash) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+<div class="spacer"></div>
+
+% my $ret = $ttl_curval - $ttl_cashin;
+
+<div class="footer_text">
+Book value : $<% Stocks::Utils::commify($ttl_cashin) %>
+</div>
+
+<div class="footer_text">
+Paper G/L : $<% Stocks::Utils::commify($ret)%> CAD (<% sprintf ("%-6.2f%",$ret/$ttl_cashin*100)%>)
+</div>
+
+<div class="footer_text">
+Year Hi/low:
+   <% sprintf ('$'."%-8.0f", $ytd->{max}{value}) %> (<% $ytd->{max}{date} %>)/
+   <% sprintf ('$'."%-8.0f", $ytd->{min}{value}) %> (<% $ytd->{min}{date} %>) 
+</div>
+   <p>
+
+<div class="footer_text" style="float:left; font-style: italic; color: #333;">
+<& indices.mas &>
+</div>
+<div class="footer_text" style="float:right; font-style: italic; color: #333;">
+* All values shown are in base currency (CAD)
+</div>
+
+<%init>
+use Stocks::User;
+use Stocks::DailyTotals;
+use Stocks::Utils;
+use List::Util qw[min max];
+#use Data::Dumper;
+
+my $USER = $m->comp ('auth.mas');
+
+my ($port,$ttl_cash,$ttl_equity,$ttl_curval,$ttl_invested,$ttlrgain,$ttl_day_gain,$ttl_day_gainpc,$ttl_gain,$ytd,$fx_rate,$ttl_cashin);
+my $usdcad = Stocks::Utils::get_usdcad;
+my $cashonly = 1 if $show eq 'cash';
+my $stockonly = 1 if $show eq 'stock';
+my $ports = $USER->getPortfolios(activeonly => 1, cashonly=> $cashonly, equityonly => $stockonly ) if ref $USER;
+
+return unless $ports;
+
+$ytd = $m->cache->get('ytdstats');
+unless ( $ytd && $ytd->{user} eq $USER->username) {
+   $ytd->{max} = Stocks::DailyTotals::getYrMax (username => $USER->username, year => 'THIS'); 
+   $ytd->{min} = Stocks::DailyTotals::getYrMin (username => $USER->username, year => 'THIS'); 
+   $ytd->{user} =  $USER->username;
+   $m->cache->set("ytdstats" => $ytd, '1h');
+ }
+
+</%init>
+

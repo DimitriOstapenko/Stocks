@@ -1,0 +1,18 @@
+<%args>
+$id => undef
+$active => undef
+</%args>
+
+
+<%init>
+use Log::Any::Adapter;
+use Log::Log4perl qw(:easy);
+use Data::Dumper;
+
+Log::Any::Adapter->set('Log4perl');
+Log::Log4perl->easy_init($ERROR);
+
+$m->log->error ("id : $id; active : $active ");
+#$m->log->error (Dumper $m->params );
+
+</%init>

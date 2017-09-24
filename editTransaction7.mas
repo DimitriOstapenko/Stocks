@@ -1,0 +1,215 @@
+<%args>
+$id => undef
+$portid => 0
+$year => undef
+$mon => undef
+$day => undef
+$time => undef
+$setl_date => undef
+$symbol => undef
+$shares => undef
+$type => undef
+$exchange => undef
+$price => undef
+$strike => undef
+$fxrate => undef
+$fees => undef
+$descr => undef
+$save => undef
+$delete => undef
+$close => undef
+</%args>
+
+<div id="page_header">
+  Edit Option Trade
+</div>
+
+<form  id="edit" method="get">
+<input type='hidden' name='portid' value=<% $portid %>>
+<input type='hidden' name='id' value=<% $id %>>
+
+<div align=center>
+<table class="mainTable" style="width:700px; text-align: left; line-height: 2.2em;"> 
+
+<tr><td> Type: </td>
+<td> 
+<input type='radio' class="BuySell" name='type' value=1 <% $tr->number>0 ?'checked':'' %>>Buy</input>
+<input type='radio' class="BuySell" name='type' value=-1  <% $tr->number<0 ?'checked':'' %>>Sell</input>
+</td></tr>
+
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $tmon)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$mon[$tmon]] ) {
+    <option value='<% $day %>'<% ($day == $tday)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $tyr)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+Time: <input type="text" name="time" size=5 value=<% $thr.':'.$tmin %> class="Form"> 
+</td></tr>
+
+<tr><td> Symbol: </td><td><input type='text' name='symbol' id="symbol" size=15 value='<% $tr->symbol %>' readonly class="Form"> 
+&nbsp; Exchange: 
+<select id="exch" name='exchange' class="Form" readonly>
+% foreach my $x ( @exch ) {
+   <option value='<% $x %>'<% ($x eq $exchange) ? 'selected="yes"':'' %>> <% $x %> </option>
+% }
+</select>
+</td></tr> 
+
+<tr><td> Settl. Date: </td><td><input type='text' name='setl_date' id="setl_date" size=10 value='<% $dateonly %>' class="Form"> </td></tr>
+<tr><td> Contracts: </td><td><input type='text' id='shares'  name='shares' size=7 value=<% abs int $tr->number %> class="Form"></td></tr>
+<tr><td> Price:  </td><td><input type='text' name='price' size=7 value='<%sprintf "%-8.4f", $tr->price %>' class="Form"></td></tr> 
+<tr><td> Strike:  </td><td><input id="strike" type='text' name='strike' size=7 value=<%sprintf ("%6.2f",$tr->strike) %> class="Form"></td></tr> 
+<tr><td> Fees:  </td><td><input type='text' id='fees' name='fees' value=<% sprintf "%-6.2f", $tr->fees %> size=7 value=<% $tr->fees %> class="Form"></td></tr>
+<tr><td> Comment:  </td><td><% $tr->descr %></td></tr> 
+
+<input type="hidden" name='save' value=''>
+<input type="hidden" name='delete' value=''>
+<input type="hidden" name='close' value=''>
+</tr>
+
+</table>
+
+<table style="width:700px;"> 
+<tr>
+<td>
+ <div class="button">
+   <div class="glare" id='Save'></div>
+     <font color='blue'>Save</font>
+ </div>
+</td>
+
+<td>
+ <div class="button" id='Delete'>
+   <div class="glare"></div>
+     <font color=red>Delete</font>
+ </div>
+</td>
+
+<td>
+ <div class="button" id='Close'>
+   <div class="glare"></div>
+     <font color=green>Close</font>
+ </div>
+</td>
+</tr>
+
+</table>
+
+</form>
+</div>
+
+<script>
+
+$('#Save').click(function(e) {
+    $('input[name=save]').val('Save');
+    $('#edit').submit(); 
+});
+
+$('#Delete').click(function(e) {
+    $('input[name=delete]').val('Delete');
+    $('#edit').submit(); 
+});
+
+$('#Close').click(function(e) {
+    $('input[name=close]').val('Close');
+    $('#edit').submit(); 
+});
+</script>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Transaction;
+use Stocks::Utils;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+my $tr = Stocks::Transaction::get (id => $id);
+my $dtime = $tr->date;
+my ($tdate,$ttime) = split(' ',$dtime);
+my ($thr,$tmin) =  split(':',$ttime);
+my ($tyr,$tmon,$tday) = split ('-', $tdate);
+
+$symbol = uc($symbol);
+Stocks::Utils::trim ( \$symbol ); # get rid of white space
+
+my $sym;
+if ($symbol =~ /\:/) {
+   ($sym,$exchange) = split(':', $symbol)
+} else {
+   $sym = $symbol;
+   $symbol = $sym.':'.$exchange;
+}
+
+$exchange ||= 'TSX';
+
+my @exch = ('TSX', 'NYSE', 'AMEX', 'NASD');
+my $days = [{"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, {"Apr"=>30}, {"May"=>31}, {"Jun"=>30}, {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30}, {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($tyr, $tyr-1, $tyr-2, $tyr-3);
+
+my ($dateonly) = split(' ', $tr->setl_date);
+
+if ( $delete ) {
+   $port->dropTransaction ('tr' => $tr);
+   $m->redirect ('trades.mas?portid='.$portid);
+}
+
+if ($save) {
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+      my $suff = ' '.$shares .' '. $symbol.' @ '.sprintf("%-6.2f",$price);
+      my $descr = ($type>0)? 'BOT'.$suff:'SOLD'.$suff;
+      $port->addTransaction (
+   			   'id' => $id,
+			   'ttype'  =>  7,				   # Call opt
+                           'symbol' => uc($sym),
+                           'number' => $shares*$type, 			   # -num for sell transactions
+                           'price'  => $price,
+			   'strike' => $strike,
+			   'portid' => $portid,
+                           'exchange' => $exchange,
+			   'fx_rate' => $fxrate || 1,
+ 		           'fees'   => $fees,
+                           'date'   => $datetime,
+                           'setl_date' => $setl_date .' 00:00:00',
+			   'descr'  => $descr
+		         );
+   $m->redirect ('trades.mas?portid='.$portid);
+}
+
+if ($close) {              # new tr.  close option on expiry; use opposite type (buy/sell) and same number of shares/price
+      $type = -$type;
+      my $suff = ' '.$shares .' '. $symbol;
+      my $descr = 'Closed '.$suff.' on expiry'; 
+      $port->addTransaction (
+			   'ttype'  =>  7,				   # Call opt
+                           'symbol' => uc($sym),
+                           'number' => $shares*$type, 			   # -num for sell transactions
+                           'price'  => $price,
+			   'strike' => $strike,
+			   'portid' => $portid,
+                           'exchange' => $exchange,
+			   'fx_rate' => $fxrate || 1,
+ 		           'fees'   => 0,
+                           'date'   => $setl_date . ' 00:00:00',
+                           'setl_date' => $setl_date .' 00:00:00',
+			   'descr'  => $descr
+		         );
+   $m->redirect ('trades.mas?portid='.$portid);
+}
+
+</%init>

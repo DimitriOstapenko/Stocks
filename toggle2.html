@@ -1,0 +1,77 @@
+<html>
+<head>
+  <script src="http://code.jquery.com/jquery-latest.js"></script>
+  <script src="/js/jquery-ui-1.8.18.custom.min.js"></script>
+
+<style>
+.bg
+{
+    width: 100px;
+    height: 26px;
+    background-image: url(/images/bg.png);
+}
+
+.slider
+{
+    width: 50px;
+    height: 26px;
+    background-image: url(/images/cb-slider.png);
+    cursor: pointer;
+    position: relative;
+}
+
+</style>
+</head>
+
+<body>
+
+<form>
+<input id="status" type="hidden" name="status"/>
+<input type=text value='xxx' name="tst">
+<div class="bg">
+    <div class="slider" status="0"></div>
+</div>
+<button >Submit</button>
+</form>
+
+<script>
+$(document).ready(function(){
+    initCheckBoxes();
+});
+
+$(".slider").click(function() {
+//  alert ($(".slider").attr("status"));
+  $("#status").val($(".slider").attr("status"));
+});
+
+var slideSpeed = 100;
+var leftDist = 55;
+
+function initCheckBoxes()
+{
+    $(".slider" ).draggable({containment: "parent"});
+    $(".slider").mouseup(function(){
+
+    var status = $(this).attr("status");
+
+    switch(status)
+    {
+        case "0":
+        //its off, slide it by 41px;
+        $(this).animate({left: leftDist}, slideSpeed);
+        $(this).attr("status", "1");
+        break;
+
+        case "1":
+        //its 'on', slide it to 0px;
+        $(this).animate({left: "0"}, slideSpeed);
+        $(this).attr("status", "0");
+
+        break;
+    }
+    });
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<%doc>
+Edit Cash (doesn not modify cashin fields in portfolio table)
+</%doc>
+
+<%args>
+$portid => undef
+$id => undef
+$cash => undef
+$weight => undef
+$year => undef
+$mon => undef
+$day => undef
+$time => undef
+$currency => undef
+$fx_rate => 1
+$descr => undef
+$submit => undef
+$exchange => undef
+$symbol => undef
+$delete => undef
+</%args>
+
+<div id="main">
+<div id="page_header"> Edit Cash Deposit: </div>
+
+<form>
+<input type='hidden' name='id' value=<% $id %>>
+<input type='hidden' name='portid' value=<% $portid %>>
+<input type='hidden' name='symbol' value=<% $tr->symbol %>>
+<input type='hidden' name='exchange' value=<% $tr->exchange %>>
+
+<table class="mainTable" style="text-align: left; line-height: 2.2em;"> 
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $tmon)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$tmon-1] ) {
+    <option value='<% $day %>'<% ($day == $tday)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $tyr)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+Time: <input type="text" name="time" size=4 value=<% $ttime %> class="Form"> 
+</td></tr>
+
+% if ($port->currency() eq 'GLD') {
+<tr><td> Weight:  </td><td><input type='text' name='weight' size=10 class="Form" value="<% $tr->weight %>"></td></tr> 
+% }
+
+<tr><td> Cash amount:  </td><td><input type='text' name='cash' size=10 class="Form" value="<% $tr->cash %>"></td></tr> 
+
+
+<tr><td> Comment:  </td><td><input type='text' name='descr' size=60 class="Form" value="<% $tr->descr %>"></td></tr> 
+<tr><td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+</table>
+
+<p>
+Check to delete this transaction: <input type='checkbox' name='delete' value='1'>
+</p>
+
+</form>
+<div style="font-size:0.8em; line-height:5em;">
+* This will affect transaction record only; no modification to cashin field in portfolio will be done
+</div>
+</div>
+
+<%init>
+use Stocks::Transaction;
+use Stocks::Portfolio;
+
+do { $m->print("portid is required"); return;} unless $portid;
+my $USER = $m->comp('auth.mas');
+
+my $port = Stocks::Portfolio::get (id => $portid);
+my $tr;
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+$tr = Stocks::Transaction::get (id => $id);
+do{$m->print("trasaction $id does not exist"); return; } unless $tr;
+
+my $dtime = $tr->date;
+my ($tdate,$ttime) = split(' ',$dtime);
+my ($tyr,$tmon,$tday) = split ('-', $tdate);
+
+($ttime) = $ttime =~ /^(\d{2}\:\d{2})/;
+
+my $days = [
+	    {"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, 
+	    {"Apr"=>30}, {"May"=>31}, {"Jun"=>30},
+	    {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30},
+	    {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}
+	   ];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($tyr, $tyr-1, $tyr-2, $tyr-3);
+my $exch;
+
+#if ( $port->currency eq 'CAD' ) {
+#   if ($currency eq 'CAD') {
+#      $exch = 'TSX';
+#   } else {
+#      $exch = 'NYSE';
+#   }
+#} else {  # US Portfolio
+#   if ($currency eq 'USD') {
+#      $exch = 'NYSE';
+#   } else {
+#      $exch = 'TSX';
+#   }
+#}
+
+if ( $submit ) {
+   do{$m->print("amount is required"); return; } unless $cash;
+
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+   if ($delete) {
+# Adjust cashin base      
+      my $cashin_base = $port->cashin_base - $tr->cash();
+      $port->cashin_base($cashin_base); 
+      $port->dropTransaction ('tr' => $tr);
+      $port->save();
+   } else {
+
+   $port->addTransaction ( 'id' => $id,
+   			   'ttype'  =>  0, 
+   			   'ttype_str' => 'CASH',
+			   'symbol' => $symbol,
+                           'number' => $cash,
+                           'price'  => 1, 
+			   'fx_rate' => 1,
+                           'date'   => $datetime,
+                           'descr'  => $descr,
+			   'exchange' => $exchange,
+			   'weight' => $weight
+                         );
+ 
+   }
+   $m->redirect ('deposits.mas?portid='.$portid);
+}
+
+</%init>

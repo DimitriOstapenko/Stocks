@@ -1,0 +1,121 @@
+<%args>
+$portid => undef
+$year => undef
+$printview => undef
+</%args>
+
+<%doc>
+Show trades for given timeframe grouped by symbol
+</%doc>
+
+<div class="centered">
+% if ( !$printview ) {
+<form>
+<input type='hidden' name='portid' value=<% $portid %>>
+Tax Year: 
+<select name="year" class="DropDown" onChange="form.submit()">
+<option value="<% $thisyr %>"><% $thisyr %></option>
+%   foreach my $yr ( reverse ($thisyr-2..$thisyr-1)){
+      <option value=<% $yr %> <% $yr eq $year ? "selected='yes'" :'' %>><% $yr %></option>
+%   }
+</select>
+</form>
+% }
+</div>
+
+
+% foreach my $sym (@$symbols) {
+
+% my $symbol = $sym->{symbol}.':'.$sym->{exchange};
+% my $trades = $port->getTrades ( symbol => $symbol,  tframe => $tframe);
+% next unless @$trades;
+% my $height = $printview ? @$trades*18 : min(@$trades*40,185);
+% $ttlrgain = $ttlnumber = $ttleq = $ttlcash = 0; 
+
+<div class="spacer">&nbsp;</div>
+<table class="mainTable" style="width:700px" align="center">
+<caption style="text-align:left">Transactions for <% $symbol %> (<% scalar @$trades %> trades) </caption><p>
+
+<thead class="Header">
+
+<tr>
+   <th>Sym.</th>
+   <th>Date</th>
+   <th>Shares</th>
+   <th>ACB</th>
+   <th>Proceeds</th>
+   <th>R. Gain</th>
+</tr>
+</thead>
+
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $tr ( @$trades ) {
+%  ($date) = split (" ", $tr->date);
+%   $rgain = $tr->equity + $tr->cash;
+%#   $rgain = -$rgain if ($tr->ttlnumber <= 0 && $tr->number >0);
+%   $ttlrgain += $rgain;
+%   $ttlnumber += $tr->number;
+%   $ttleq += $tr->equity;
+%   $ttlcash += $tr->cash;
+
+    <tr>
+	<td><% $symbol %></td> 
+	<td> <% $date %> </td> 
+	<td> <% $tr->number %> </td>
+	<td> <% sprintf("%-8.2f",$tr->equity) %> </td>
+	<td> <% sprintf("%-8.2f",$tr->cash) %> </td>
+	<td> <% sprintf("%-8.2f",$rgain) %> </td> 
+    </tr>
+% }
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td><font color="<% $color %>"><% '_' x (7) %></font></td>
+<td><font color="<% $color %>"><% '_' x (7) %></font></td>
+<td><% $ttlnumber %></td>
+<td><% sprintf("%-8.2f",$ttleq) %></td>
+<td><% sprintf("%-8.2f",$ttlcash) %></td>
+<td><% sprintf("%-8.2f",$ttlrgain) %></td>
+</tr>
+</tfoot>
+</table>
+%   $grandttlrgain += $ttlrgain;
+%}
+
+<div style="position:absolute; top:0px; right:130px;">
+Grand Total Realized Cap. Gain/Loss : <b>$<% Stocks::Utils::commify($grandttlrgain) %></b>
+</div>
+<div style="position:absolute; top:60px; right:130px;"> 
+<a href="print/taxes.mas?portid=<%$portid%>&year=<%$year%>">Print View</a>
+</div>
+
+<%init>
+use Stocks::Portfolio;
+use List::Util qw[min max];
+
+my ($date,$rgain,$ttlrgain,$ttlnumber,$ttleq,$ttlcash,$grandttlrgain);
+
+my $USER = $m->comp('auth.mas');
+do {$m->print("portid is required"); return; } unless $portid;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+my $symbols = $port->getSymbols if $port;
+
+my $thisyr = Stocks::Utils::thisyr;
+$year ||= $thisyr;
+my $sdate = $year. '-01-01';
+my $edate = ($year == $thisyr) ? 'Now': $year.'-12-31';
+my $tframe;
+
+if ($year == $thisyr ) {
+   $tframe = 'ytd';
+} elsif ($year == $thisyr-1) {
+   $tframe = 'lyr';
+} else {
+   $tframe = 'lyr-1';
+}
+
+my $color= $printview ? "white" : "black";
+</%init>

@@ -1,0 +1,144 @@
+<%args>
+$portid => undef
+$day => undef
+$mon => undef
+$year => undef
+$symbol => undef
+$exchange => undef
+$number => undef
+$amount => undef
+$dripnumber => undef
+$dripprice => undef
+$submit => undef
+</%args>
+
+<div id="inside">
+<div id="page_header"> Add Dividend: </div> 
+
+<div class="spacer"></div>
+
+<form name="tr">
+<input type='hidden' name='portid' value=<% $portid %>>
+
+<table class="mainTable" style="text-align: left; line-height: 2.2em;"> 
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $monow)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..$days[$monow-1] ) {
+    <option value='<% $day %>'<% ($day == $daynow)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $yrnow)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+</td></tr>
+
+<tr>
+<td> Symbol: </td>
+<td>
+
+% my %syms = map{$_->{symbol}.':'.$_->{exchange},$_->{ttlnumber}} @$symbols;
+% print '<script type="text/javascript">',"\n";
+% print 'var data = '.encode_json(\%syms)."\n";
+% print 'var data2 = '.encode_json(\%div)."\n";
+% print "</script> \n";
+
+<select name='symbol' <% $submit %> class="Form" onChange="number.value=data[symbol.value]; var val=data2[symbol.value]*data[symbol.value]; if (!val) {val=0}; amount.value = val.toFixed(2)">
+
+<option value=''>Please Select</option>
+% foreach my $sym (sort keys  %syms ){
+   <option value='<% $sym %>' <% $symbol eq $sym ? "selected='yes'":''%>"><% $sym %></option>
+% }
+</select>
+</td>
+</tr> 
+
+<tr><td> #Shares:  </td><td><input type='text' name='number' size=7 class="Form"></td></tr> 
+<tr><td> Amount:  </td><td><input type='text' name='amount' size=7 class="Form"></td></tr> 
+<tr><td> <b>DRIP:</b>  </td></tr>
+<tr><td> #Shares:  </td><td><input type='text' name='dripnumber' size=7 class="Form"> (opt)</td></tr> 
+<tr><td> Share price:  </td><td><input type='text' name='dripprice' size=7 class="Form"> (opt)</td></tr> 
+<tr><td></td><td><input class="Form" type="submit" name="submit" value="Submit"></td></tr>
+</table>
+
+</div>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Transaction;
+use Stocks::Dividend;
+use JSON;
+
+do { $m->print("portid is required"); return;} unless $portid;
+my $USER = $m->comp('auth.mas');
+
+my $port = Stocks::Portfolio::get (id => $portid);
+my $symbols = $port->getSymbols(activeOnly => 0, options =>0);
+my $divs = Stocks::Dividend::getAll();
+my %div = map{$_->{symbol}.':'.$_->{exchange}, $_->{value}/$_->{frequency}}  @$divs;
+
+my @ts = localtime();
+my $time = '00:00:00';
+my $time2 = '00:00:10';  # div and buy/sell need to have different times for edit to work properly
+my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+my $datetime2 = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time2;
+my $daynow = $ts[3];
+my $monow  = $ts[4] + 1;
+my $yrnow  = $ts[5] + 1900;
+my ($shortsym, $exch) = split (':', $symbol) if $symbol; 
+
+my $days = [
+	    {"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31},
+	    {"Apr"=>30}, {"May"=>31}, {"Jun"=>30},
+	    {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30},
+	    {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}
+	   ];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($yrnow, $yrnow-1,$yrnow-2,$yrnow-3);
+
+if ($submit) {
+   do { $m->print("please select symbol"); return;} unless $symbol;
+   do { $m->print("please specify amount"); return;} unless $amount;
+   do { $m->print("please specify DRIP share price"); return;} if ($dripnumber && !$dripprice);
+   do { $m->print("please specify DRIP number of shares"); return;} if ($dripprice && !$dripnumber);
+   my $descr = 'Div '.$number . ' ' . $shortsym;
+
+# Add dividend :
+   $port->addTransaction ( 'ttype'  => 2, 
+   			   'ttype_str' => 'DIV',
+			   'symbol' => $shortsym,
+                           'number' => $number,
+                           'price'  => $amount,
+                           'date'   => $datetime,
+                           'descr'  => $descr
+                         );
+
+# Purchase more shares if DRIP fields were filled
+
+   $port->addTransaction (
+			   'ttype'  =>  1,		
+			   'ttype_str' => 'DRIP',
+                           'symbol' => $shortsym,
+                           'number' => $dripnumber,
+                           'price'  => $dripprice,
+                           'exchange' => $exchange || 'TSX',
+                           'date'   => $datetime2,
+			   'descr'  => "DPP $dripnumber @ $dripprice",
+		         ) if ($dripprice && $dripnumber);
+
+   $m->redirect ('dividends.mas?portid='.$portid);
+}
+
+</%init>

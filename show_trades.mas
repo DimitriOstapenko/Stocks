@@ -1,0 +1,72 @@
+<%args>
+$trans
+$port
+$symbol
+$tframe
+</%args>
+
+<table class="mainTable" style="width:850px" align='center'>
+<thead class="Header">
+
+<tr>
+   <th></th>
+   <th>Total Shares</th>
+   <th>Cash</th>
+   <th>Avg. Price</th>
+   <th>Real. Gain</th>
+   <th>Tr. Date </th>
+</tr>
+</thead>
+   <div id="plus"><a href="addTransaction1.mas?portid=<% $port->id %>&symbol=<% $symbol %>">
+    <img class='add' src='/images/plus.png' alt='Add' title='Add'></a>
+   </div>
+
+% my $height = min($trcount*37,360);
+<tbody class="Content" style="height: <%$height%>"> 
+
+<%doc>
+% foreach my $t (sort {$a->[4] cmp  $b->[4]} @$trans ){
+</%doc>
+
+% foreach my $t ( @$trans ){
+% my $gain = $t->equity + $t->cash; # if abs $t->cash > 0; # 1,7,8 only here; shorts have cash>0
+% $ttlgain += $gain; $ttlnumber += $t->number; 
+% $class = $t->number > 0 ? 'bought':'sold';
+  <tr class= "<% $class %>">
+    <td><a href='editTransaction<% $t->ttype %>.mas?portid=<% $port->id %>&id=<% $t->id %>'><% ($t->number>0?'BOT':'SLD').' '.abs($t->number).' '.$t->symbol .' @ '. $t->price %></a></td>
+    <td><% sprintf("%-8.0f",$t->ttlnumber) %></td>
+    <td><% sprintf ("%-8.0f", $t->cash) %></td>
+    <td><% sprintf ("%-8.4f", $t->avgprice) %></td>
+    <td><% sprintf ("%-8.2f", $gain) %></td>
+% my ($dt,$tm) = split(' ', $t->date);
+    <td><% $tframe eq 'td'?$tm:$dt %></td>
+<!--    <td><A href='editTransaction1.mas?portid=<% $port->id %>&id=<% $t->id %>'><img src="/images/edit.png" class="edit"></a></td> -->
+  </tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td><% $symbol?$ttlnumber:'' %></td>
+<td></td>
+<td></td>
+<td><div class="<% $ttlgain>0?'gain':'loss' %>"><% sprintf ("%-8.2f", $ttlgain) %></div></td>
+</tr>
+</tfoot>
+
+</table>
+
+<%init>
+use List::Util qw[min max];
+
+my ($ttlgain,$ttlnumber,$class) = 3x0;
+my $trcount = scalar @$trans;
+
+return unless $trcount;
+
+</%init>
+
+

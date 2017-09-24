@@ -1,0 +1,78 @@
+<%args>
+$symbol
+</%args>
+
+   <a class="thumbnail" href="https://finance.yahoo.com/chart/
+<% $sym.$suff %>" target="_new"><img src="/images/chart.png" width="42" height="42" border="0" /><span><img src="http://chart.finance.yahoo.com/z?&t=1d&q=&l=&z=s&a=v&p=s&lang=en-US&region=US&border=0&s=<% $sym.$suff %>" width="500" height="300" /><br/></span></a> 
+
+<table class='mainTable'>
+<caption>
+<div style="height:2em; color:yellow;">
+<% $quote->name . ' ('.$quote->exchange.':'.$quote->symbol.')'%> : <% sprintf ("%-8.2f", $quote->price).$cur %>
+% my $pchange =  $quote->p_change; $pchange =~ s/\W*$//; 
+<span class=<% $class %>>&nbsp;&nbsp;<% sprintf (" %+8.2f", $quote->net)%> &nbsp;<% sprintf ("(%4.2f%)", $pchange) %></span></th>
+</div>
+</caption>
+
+<thead class="Content">
+<tr bgcolor='#666'>
+<td>Time : <b><% $time %></b></td>
+<td>Open : <b><% sprintf ("%8.2f", $quote->open) %></b></td>
+<td>P.Close : <b><% sprintf ("%8.2f", $quote->close) %></b></td>
+</tr>
+
+<tr>
+<td>Range : <b><% sprintf ("%8.2f - ", $quote->low) %><% sprintf ("%8.2f", $quote->high) %></b></td>
+<td>52 wk Range: </td><td><b><% sprintf ("%8.2f - ", $quote->year_low) %><% sprintf ("%8.2f", $quote->year_high) %></b></td>
+</tr>
+
+<tr bgcolor='#666'>
+<td>EPS: <b><% $quote->eps>0?$quote->eps:'-' %></b>
+<td>P/E : <b><% $quote->pe>0?$quote->pe:'-' %></b></td>
+% my $cap = $quote->cap/1000; # $cap =~ s/(\d{1,3}?)(?=(\d{3})+$)/$1,/g;
+<td>Market Cap: <b><% $cap >0 ? Stocks::Utils::commify(int($cap)):'-' %></b></td>
+</tr>
+
+<tr>
+% my $volume = $quote->volume || '-'; 
+<td>Volume : <b><% Stocks::Utils::commify(int($volume)) %></b></td>
+% my $avg_vol = $quote->avg_vol || '-'; 
+<td>Avg. Vol. : <b><% Stocks::Utils::commify(int($avg_vol)) %></b></td>
+<td>Ex. Div Date : <b><% $quote->ex_div %></b></td>
+</tr>
+
+<tr bgcolor='#666'>
+<td>Annual Div. : <b><% $quote->div>0?sprintf("%6.2f",$quote->div):'-' %></b></td>
+<td>Yield : <b><% $quote->div_yield>0 ? sprintf("%6.2f",$quote->div_yield).'%':'-' %></b></td>
+% $next_div = 'Unknown' if $next_div =~ /70$/;
+<td>Div Pay Dt: <b><% $next_div ? $next_div:'' %></b></td>
+</tr>
+
+</thead>
+</table>
+
+<div class="spacer"></div>
+
+% return 1;
+
+<%init>
+use Stocks::Quote;
+use DateTime;
+
+my ($sym, $exchange ) = split(':',$symbol);
+my $quote = Stocks::Quote::get ( symbol => $sym, exchange => $exchange );
+
+do { $m->print ("<br>Symbol not found - please try again<p>"); return; } unless $quote && $quote->price;
+
+my ($date,$time) =  split(' ', $quote->timestamp);
+my @time = split(':', $time);
+$time = $time[0].':'.$time[1];
+my $last_div =  $quote->ex_div;
+my $next_div = $quote->div_date;
+my $cur = $exchange eq 'TSX' ? 'CDN':'USD';
+my $class = ($quote->net > 0)? 'gain':'loss';
+my %exch = ( 'NASD' => '', 'NYSE' => '', 'AMEX' => '', 'TSX' => 'TO');
+my $suff = '';
+$suff = '.'.$exch{$exchange} if ($symbol && $exchange );
+
+</%init>

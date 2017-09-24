@@ -1,0 +1,136 @@
+<%args>
+$port
+</%args>
+
+<%doc>
+Show 2 different tables depending on if there are stocks in this portfolio
+</%doc>
+
+<table class="mainTable">
+<thead class="Header">
+
+<tr>
+   <th>Position</th>
+   <th>Cur. Price</th>
+   <th>$Chg</th>
+   <th>Book Value</th>
+   <th>Mkt. Value</th>
+   <th>$P/L</th>
+   <th>$Day P/L</th>
+</tr>
+</thead>
+
+% my $stocks =  @{$port->assets};
+% my $height =  $stocks*37;
+
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $ass ( @{$port->assets} ){
+
+<%perl>
+  my $shares = $ass->{number};
+  my $symbol = $ass->{symbol};
+  my $opt = 1 if $symbol =~ /\d+(C|P)$/;
+  my $quote = Stocks::Quote::get ( symbol => $symbol, exchange => $ass->{exchange} ) unless $opt;  # no quotes for options
+  my $fx_rate = Stocks::Utils::getFX (portcurrency => $port->currency, symexchange => $ass->{exchange});
+  my ($net,$price) = (0)x2;
+
+  $todaygain = $tdrgain = 0; 
+ 
+  next unless $shares; 
+
+  if ( $opt ) {
+     $curval = $ass->{cash}; 
+     $gain = $ass->{realgain};
+  }else {
+     next unless defined $quote && $quote->last;
+     $curval = $quote->last * $shares;
+     $gain = $quote->last * $shares - $ass->{equity};
+     $ttlgain += $gain * $fx_rate;
+     $todaygain = ($quote->last - $quote->close)*$shares if Stocks::Utils::monToFri();
+     $ttldaygain += $todaygain * $fx_rate;
+     $price = $quote->price;
+     $net = $quote->net;
+  }
+
+  $ttlcurval += $curval * $fx_rate;
+  $ttlequity += $ass->{equity} * $fx_rate;
+
+</%perl>
+
+
+  <tr>
+    <td><a href='trades.mas?symbol=<% $ass->{symbol} .':'.$ass->{exchange} %>&portid=<% $port->id %>'> <b><% $shares.' '.$ass->{symbol} %></b></a></td>
+    <td><% sprintf ("%-8.2f", $price) %></td>
+    <td>
+%   my $class = ($net >= 0)? 'gain':'loss';
+    <span class=<% $class %>><% sprintf ("%+8.2f", $net) %></span></td>
+    <td><% sprintf ("%-8.0f", $ass->{equity}) %></td>
+    <td><% sprintf ("%-8.0f", $curval ) %></td>
+    <td><% sprintf ("%-8.0f", $gain ) %> </td>
+    <td><% $todaygain ? sprintf ("%-8.2f", $todaygain) : '-' %></td>
+  </tr>
+
+% }
+
+</tbody>
+
+%# Get this from daily_totals table
+% $prevdayttl = $port->getPrevVal();
+
+%# this one can be different from $ttldaygain if there were deposits/dividends entered
+% $daychng = $ttlcurval + $port->cash - $prevdayttl;
+% $ttlgainpc = ($ttlgain / $ttlequity)*100 if $ttlequity;
+% $ttldaygainpc = ($daychng / $ttlequity) *100 if $ttlcurval;
+
+<tfoot class="Footer">
+  <tr>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td><% sprintf ("\$%-8.0f", $ttlequity) %></td>
+  <td><% sprintf ("\$%-8.0f", $ttlcurval) %></td>
+  <td><% sprintf ("\$%-8.0f", $ttlgain) %></td>
+  <td><% $ttldaygain ? sprintf ("\$%-8.0f", $ttldaygain):'&nbsp;'  %></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<p>
+<div class="footer_text">
+Invested : <b><% sprintf ("%-8.0f", $port->cashin) . $port->currency %>; &nbsp;</b>
+% my $return = $ttlcurval + $port->cash - $port->cashin;
+Return : <b>$<% sprintf ("%-8.0f", $return ) %>(<% sprintf ("%-4.2f%", ($return/$port->cashin)*100) %>) ; </b>  &nbsp;
+Paper G/L: <b><% sprintf ("\$%-8.0f", $ttlgain) %> (<% sprintf ("%-6.2f", $ttlgainpc) %>%) </b> ; &nbsp;
+% if ( abs $port->yrgain > 10) {
+Realized G/L: <b><% sprintf ("\$%-8.0f", $port->yrgain) %> </b>; &nbsp; 
+%}
+% if ( abs $ttltdrgain > 10) {
+Day Realized G/L : <b><% sprintf ("\$%-8.0f", $ttltdrgain) %> </b>
+%}
+Change over last year: <b><% sprintf ("\$%-8.0f", $ttlcurval + $port->cash - $ttllyrval) %></b> 
+
+</div>
+
+<%init>
+use Stocks::Quote;
+use Stocks::Utils;
+use List::Util qw[min max];
+use Data::Dumper;
+
+my ($gain,$gainpc,$curval,$ttlcurval,$ttlcash,$ttlgain,$prevdayttl,$ttlgainpc,$ttldaygainpc,$ttlequity,$daychng);
+my ($tdequity, $todaygain, $ttldaygain, $tdrgain, $tdnum, $ttltdrgain, $ttllyrval) = (0x7);
+
+my %tdrgains = $port->getRealGain ( sdate => Stocks::Utils::today() );
+
+$ttltdrgain=0;
+foreach my $sym (keys %tdrgains) {
+  $ttltdrgain += $tdrgains{$sym}; 
+}
+
+my $usdcad = Stocks::Utils::get_usdcad;
+
+do {$m->print ("please select portfolio"); return; } unless $port;
+$ttllyrval = $port->getLyrValue();
+</%init>

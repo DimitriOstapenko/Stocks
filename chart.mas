@@ -1,0 +1,45 @@
+<%args>
+$tframe => 'ytd'
+$portid => undef
+</%args>
+
+<div id="inside">
+<table width='920'>
+ <tr> 
+  <td>
+    <table align='right' cellpadding=0 cellspacing=0>
+      <tr><td>
+% if ($portid) {
+%   $chart_ok = $m->comp('port_chart_line.mas', tframe => $tframe, portid => $portid);
+%} else {    
+%   $chart_ok = $m->comp('all_chart_line.mas', tframe => $tframe);
+%}
+      </td></tr>
+    </table>
+  </td>
+% if ( $chart_ok ) {
+  <td>
+     <table align='left' class="tframe">
+      <tr><td nowrap>
+       <a href="?portid=<%$portid%>&tframe=all">Max</a><br>
+       <a href="?portid=<% $portid %>&tframe=wktd">This Week</a><br>
+       <a href="?portid=<% $portid %>&tframe=mtd">This Month</a><br>
+       <a href="?portid=<% $portid %>&tframe=lmo">Last Month</a><br>
+       <a href="?portid=<% $portid %>&tframe=lmtd">Last Month To Date</a><br>
+       <a href="?portid=<% $portid %>&tframe=qtd">This Quarter </a><br>
+       <a href="?portid=<% $portid %>&tframe=lqtr">Last Quarter </a><br>
+       <a href="?portid=<% $portid %>&tframe=lqtd">Last Qtr To Date</a><br>
+       <a href="?portid=<% $portid %>&tframe=ytd">Year To Date</a><br>
+       <a href="?portid=<% $portid %>&tframe=lyr">Last Year</a><br>
+       <a href="?portid=<% $portid %>&tframe=lytd">Last Year To Date</a><br>
+      </td></tr>
+     </table>
+  </td>
+% }
+</tr>
+</table>
+
+<%init>
+my $chart_ok; 
+</%init>
+

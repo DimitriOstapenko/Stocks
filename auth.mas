@@ -1,0 +1,14 @@
+<%doc>
+Get USER obj from session, build user obj and return to caller 
+Redirect to login page if session was not set
+</%doc>
+
+<%init>
+
+my $user = $m->session->{USER} ||
+   $m->redirect('/ipad/login.mas?referrer='.$m->request_comp->path);
+
+#return Stocks::User::get (username => $username);
+return $user; 
+
+</%init>

@@ -1,0 +1,45 @@
+<html>
+<head>
+  <style>
+.p1 { width:400px; }
+.p2 { width:400px; }
+
+.on2, .off2 {
+     width: 45px;
+     height: 20px;
+     margin: 1px;
+     float: left;     
+     background-color: blue;
+     color: #FFFFFF;
+}
+  </style>
+  <script src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+
+<body>
+
+<button class="on" onclick="toggleByClass('off')">BUY</button>
+<button class="off" onclick="toggleByClass('on')">SELL</button>
+
+<p>
+blah blah blah 
+</p>
+
+<script>
+    $("#but").click(function () {
+    alert ($('button').val());
+    $('button').toggle();
+      $('#but').replaceWith('<button>SELL</button>');
+    });
+
+//$("div").ready(function() { $(.off).toggle(); }
+
+function toggleByClass(className) {
+     $("."+className).toggle();
+//      $(".on").replaceWith('<button>SELL</button>');
+//      $(".off").replaceWith('<button>BUY</button>');
+}
+</script>
+
+</body>
+</html>

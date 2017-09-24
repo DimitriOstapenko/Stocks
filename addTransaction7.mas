@@ -1,0 +1,183 @@
+<%args>
+$portid => 0
+$year => undef
+$mon => undef
+$day => undef
+$time => undef
+$setl_date => undef
+$symbol => undef
+$shares => undef
+$type => undef
+$optype => undef
+$exchange => undef
+$price => undef
+$strike => undef
+$fxrate => undef
+$fees => undef
+$save => undef
+</%args>
+
+<div id="page_header">
+  New Option Trade :
+  <span style="width:550px;float:right"><a href="addTransaction1.mas?portid=<% $portid %>">Stock Trade</a></span>
+</div>
+
+<form id="new" method="get">
+<input type='hidden' id="portid" name='portid' value=<% $portid %>>
+
+<div align="center">
+<table class="mainTable" style="width:700px;text-align: left; line-height: 2.5em;"> 
+
+<tr><td> Type: </td>
+<td> 
+<input type='radio' name='optype' value='Call' class="BuySell"><font color="blue">Call</font></input>
+<input type='radio' name='optype' value='Put'  class="BuySell"><font color="green">Put</font></input>
+</td>
+</tr>
+
+<tr><td> Action: </td>
+<td> 
+<input type='radio' name='type' value=1 class="BuySell"><font color="blue">Buy</font></input>
+<input type='radio' name='type' value=-1 <% $symbol ? 'checked=1':''%> class="BuySell"><font color="green">Sell</font></input>
+%#<input type='radio' id="close" name='type' value=0 class="BuySell"><font color="green">Close</font></input>
+</td>
+</tr>
+
+<tr><td> Date: </td>
+<td>
+
+<select name="mon" class="Form">
+% foreach my $mon ( 1..12 ) {
+    <option value='<% $mon %>'<% ($mon == $monow)?' selected="yes"':''%>><% $mon[$mon-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $day ( 1..31 ) {
+    <option value='<% $day %>'<% ($day == $daynow)?' selected="yes"':''%>><% $day %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $yrnow)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+Time: <input type="text" name="time" size=5 value=<% $timenow %> class="Form"> 
+</td></tr>
+
+<tr><td> Symbol: </td><td><input type='text' name='symbol' id="symbol" size=7 value='' class="Form"> 
+&nbsp; Exchange: 
+<select id="exch" name='exchange' class="Form">
+% foreach my $x ( @exch ) {
+   <option value='<% $x %>'<% ($x eq $exchange) ? 'selected="yes"':'' %>> <% $x %> </option>
+% }
+</select>
+</td></tr> 
+
+<tr><td> Expiry Date: </td><td><input type='text' name='setl_date' id="setl_date" size=10 value='<%$ yrnow %>-' class="Form"> </td></tr>
+
+<tr><td> Contracts: </td><td><input id="shares" type='text' name='shares' size=7 class="Form"></td></tr>
+<tr><td> Price:  </td><td><input id="price" type='text' name='price' size=7 class="Form"></td></tr> 
+<tr><td> Strike:  </td><td><input id="strike" type='text' name='strike' size=7 class="Form"></td></tr> 
+<tr><td> Fees:  </td><td><input id="fees" type='text' name='fees' size=7 class="Form"></td></tr>
+
+<tr><td><div class="spacer"></div></td></tr>
+
+%#<tr><td></td><td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+</table>
+
+<input type="hidden" name='save' value=''>
+
+<table style="width:700px;"> 
+<tr><td>
+ <div class="button" id="Save">
+   <div class="glare"></div>
+     Save
+ </div>
+ </td></tr>
+</table>
+
+</form>
+</div>
+
+<script>
+$('#Save').click(function(e) {
+        $('input[name=save]').val('Save');
+	    $('#new').submit(); 
+});
+</script>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+$symbol = uc($symbol);
+Stocks::Utils::trim ( \$symbol ); # get rid of white space
+
+my $sym;
+if ($symbol =~ /\:/) {
+   ($sym,$exchange) = split(':', $symbol)
+} else {
+   $sym = $symbol;
+   $symbol = $sym.':'.$exchange;
+}
+
+$exchange ||= 'TSX';
+
+my @ts = localtime();
+my $timenow = sprintf("%02d",$ts[2]). ':' . sprintf("%02d", $ts[1]);
+my $daynow = $ts[3];
+my $monow  = $ts[4]+1;
+my $yrnow  = $ts[5] + 1900;
+
+do { $m->print("portid is required"); return;} unless $portid;
+my $USER = $m->comp('/auth.mas');
+
+if ( $save ) {
+   do { $m->print("select transaction type: buy or sell"); return;} unless defined $type;
+   do { $m->print("select option type: Call or Put"); return;} unless defined $optype;
+   do { $m->print("specify symbol"); return;} unless $symbol;
+   do { $m->print("select exchange"); return;} unless $exchange;
+   do { $m->print("specify number of shares"); return;} unless $shares;
+   do { $m->print("specify price"); return;} unless $price;
+}
+
+my ($dateonly) = split(' ', $setl_date);
+my ($smon,$sday) = (split('-', $dateonly))[1,2];
+$sym = $sym.'_'.$smon.$sday.'_'.$strike.substr($optype,0,1);
+
+my @exch = qw(TSX NYSE AMEX NASD);
+my $days = [{"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31}, {"Apr"=>30}, {"May"=>31}, {"Jun"=>30}, {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30}, {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($yrnow, $yrnow-1, $yrnow-2, $yrnow-3);
+my $port = Stocks::Portfolio::get (id => $portid);
+
+if ( $save ) {
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' '.$time;
+   my $suff = " $shares ${optype}s $sym @ $price";
+   my $descr = ($type>0)? 'BOT'.$suff:'SOLD'.$suff;
+
+# Buy/Sell shares
+   $port->addTransaction (
+			   'ttype'  => 7,
+                           'symbol' => $sym,
+                           'number' => $type>0?$shares:-$shares,
+                           'price'  => $price,
+			   'strike' => $strike,
+                           'exchange' => $exchange,
+			   'fx_rate' => $fxrate || 1,
+ 		           'fees'   => $fees,
+                           'date'   => $datetime,
+                           'setl_date' => $setl_date .' 00:00:00',
+			   'descr'  => $descr
+		         );
+   $m->redirect ('trades.mas?portid='.$portid.'&tframe=ytd'.'&symbol='.$sym.':'.$exchange);
+} else {
+}
+
+
+</%init>

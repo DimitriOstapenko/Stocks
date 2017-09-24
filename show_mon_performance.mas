@@ -1,0 +1,103 @@
+<%args>
+$port => undef
+$year => undef
+$month => undef
+</%args>
+
+<%doc>
+ daily performance this month
+</%doc>
+
+<span id='navlink'>
+% if ( $month > 1) {
+<a id='navlink' href="performance.mas?portid=<% $port->id %>&year=<% $year %>&month=<% $month-1 %>"><</a>
+% }
+
+<% $full_month_name %> <a id='navlink' href='performance.mas?portid=<% $port->id %>&year=<% $year %>'><% $year %></a>
+
+% if ($month < 12) {
+<a id='navlink' href="performance.mas?portid=<% $port->id %>&year=<% $year %>&month=<% $month+1 %>">></a>
+% }
+</span>
+
+<table class="mainTable">
+<thead class="Header">
+<tr>   
+   <th>Day</th>
+   <th>Cash</th>
+   <th>Equity</th>
+   <th>Total</th>
+   <th>Depos.</th>
+   <th>P/L</th>
+   <th>%P/L - dep</th>
+</tr>
+</thead>
+
+% my $height = @data*37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% $prevttl = $ttl = $day = 0;
+% foreach my $dt ( @data ) {
+<%perl>
+   $deposits = $port->getDayTotalDep ( date => $dt->{date} );
+   $ttldeposits += $deposits;
+   $transfers = $port->getDayTotalTransf ( date => $dt->{date} );
+   $ttltransfers += $transfers;
+   $ttl = $dt->{cash} + $dt->{equity};
+   if ( $prevdt ) {
+      $prevttl = $prevdt->{cash} + $prevdt->{equity};
+   } else {
+      $prevttl = $prevmonttl->cash + $prevmonttl->{equity}; 
+   }
+   $P_L = $ttl - $prevttl - $deposits - $transfers;
+   $ttlP_L += $P_L;
+   $prevdt = $dt;
+</%perl>
+    <tr>
+     <td><% $dt->{date} %></td>
+     <td><% sprintf ("%-8.2f", $dt->{cash}) %></td>
+     <td><% sprintf ("%-8.2f", $dt->{equity}) %></td>
+     <td><% sprintf ("%-8.2f", $dt->{cash} + $dt->{equity}) %></td>
+     <td><% sprintf ("%-8.2f", $deposits ) %></td>
+     <td><% sprintf ("%-8.2f", $P_L ) %></td>
+     <td><% $prevttl ? sprintf ("%-8.2f", $P_L/$prevttl*100):'' %></td>
+    </tr>
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttldeposits) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlP_L) %></td>
+<td><% sprintf ("%-5.2f%", $ttlP_L/$ttlcurval*100) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+<%init>
+use Stocks::DailyTotals;
+use Stocks::Utils;
+
+my ($ttl, $prevttl, $mon_name, $mon, $day, $P_L, $ttlP_L, $ttldeposits, $ttltransfers) = (undef) x 8; 
+my (@data, $full_month_name);
+my $thisyr = (localtime())[5] + 1900;
+$year ||= $thisyr;
+my ($deposits,$transfers,$prevdt,$prevyr,$prevmon);
+
+$prevmon = $month-1; $prevyr = $year;
+do { $prevmon = 12; $prevyr = $year-1 } unless $prevmon;
+
+my $prevmonttl = $port->getMonthTotals ( year => $prevyr, month => $prevmon);
+@data = @{$port->getMonth( year => $year, month => $month )};
+
+$full_month_name = Stocks::Utils::getMonthName(numon => $month);
+
+# Portfolio value as of 5 pm this/last night
+my $ttlcurval = $port->getCurVal( year => $year );
+</%init>

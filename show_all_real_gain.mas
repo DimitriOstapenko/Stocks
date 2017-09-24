@@ -1,0 +1,67 @@
+<%args>
+$showgain => undef
+$year => undef
+</%args>
+
+<div style="font-weight: bold"> Realized Gain/Loss This Year </div>
+
+<table>
+<tr><td valign="top">
+
+<table class='mainTable' style="width:260px">
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+   <th>Gain/Loss</th>
+</tr>
+</thead>
+
+% my $height = %$ports*37; 
+<tbody class="Content" style="height: <%$height%>;"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+my $class = ($showgain == $id)? 'label_selected' : 'label'; 
+$rgain += $port->yrgain();
+</%perl>
+
+<tr>
+<td><a href='allperformance.mas?showgain=<% $port->id %>'><div class="<%$class%>"><% $port->name %></div></a></td>
+<td><% sprintf ("%-8.0f", $port->yrgain) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $rgain) %></td>
+</tr>
+</tfoot>
+
+</table>
+</td>
+<td valign="top">
+
+ <& "show_real_gain.mas", portid => $portid &>
+
+</td></tr>
+</table>
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+
+my $USER = $m->comp ('auth.mas');
+my $portid = $showgain;
+
+my $ports = $USER->getPortfolios;
+return unless $ports;
+
+my ($rgain);
+
+</%init>
+

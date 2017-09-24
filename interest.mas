@@ -1,0 +1,44 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$symbol => undef
+
+</%args>
+
+% if (@$tr) {
+<& show_interest.mas, trans => $tr, port => $port &>
+%} else {
+  No transactions found - 
+  <a href="addTransaction3.mas?portid=<% $portid %>" id="new_trans">Add First</a>
+%}
+
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+my $USER = $m->comp('auth.mas');
+my $ttype = 3;
+$tframe ||= 'ytd';
+
+$m->redirect('allinterest.mas') unless $portid;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+my $range = Stocks::Utils::getDateRange ( $tframe );
+
+my $tr = $port->getTransactions (
+				   sort => 'date', 
+				  order => 'desc', 
+				  sdate => $range->{sdate}, 
+				  edate => $range->{edate}, 
+				  ttype => $ttype,
+			        );
+
+
+</%init>
+
+

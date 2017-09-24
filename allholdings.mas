@@ -1,0 +1,72 @@
+<%args>
+$tframe => 'ytd'
+$portid => undef
+</%args>
+
+<table class="mainTable">
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+% foreach my $sym (sort keys %syms ) {
+   <th><% substr($sym,0,6) %></th>
+% }
+</tr>
+</thead>
+
+% my $height = %$ports*58;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+
+<tr>
+<td><a href='holdings.mas?portid=<% $id %>'><b><% $$ports{$id} %></b></a></td>
+% foreach my $sym (sort keys %syms ) {
+%   my $pos = $$holdings{$sym.':'.$id};
+%   $ttlshares{$sym} += $pos;
+   <td><% $pos ? $pos: '&nbsp;' %></td>
+% }
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td><% '&nbsp;'x10 %></td>
+% foreach my $sym (sort keys %syms ) {
+   <td><% sprintf ("%-8.0f", $ttlshares{$sym}) %></td>
+% }
+</tr>
+
+<%doc>
+<tr>
+<td><% '&nbsp;'x10 %></td>
+% foreach my $sym (sort keys %syms ) {
+   <td><% sprintf ("%-8.0f", $ttlshares{$sym}*100) %></td>
+% }
+</tr>
+</%doc>
+
+</tfoot>
+
+</table>
+
+<%init>
+use Stocks::User;
+use Stocks::Quote;
+use List::Util qw[min max];
+
+$m->redirect ('/holdings.mas?portid='.$portid ) if $portid;
+
+my $USER = $m->comp ('auth.mas');
+my $holdings = $USER->getHoldings;
+my %syms =  map{split(':',$_) } keys %$holdings;  # symbol => portid
+
+my $ports = $USER->getPortfolios(activeonly => 1, equityonly => 1);
+return unless $ports;
+
+my %ttlshares;
+
+</%init>
+

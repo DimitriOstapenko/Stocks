@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+  </style>
+  <script src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+<body>
+
+<div class="result"></div>
+
+<form id="trade">
+Brokerid: <input type="text" id="brokerid" name="id" size="4" value="2"><br>
+Exchange: <input type="text" id="exch" name="exch" size="4" value='TSX'><br>
+Shares: <input type="text" id="shares" name="shares" size="10"><br>
+Fees: <input type="text" id="fees" name="fees" size="10"><br>
+<input type="submit" name="submit" >
+</form>
+
+<script>
+$("#shares").change( function(e){
+//        alert($(this).val());
+        $.get('./getfees.pl?shares='+$(this).val()+'&id='+$('#brokerid').val()+'&exch='+$('#exch').val(), function(data){$('#fees').val(data.fees);});
+}
+)
+</script>
+
+</body>
+</html>

@@ -1,0 +1,183 @@
+<%args>
+$user => undef
+$portid => undef
+$port => undef
+$symbol => undef
+$tframe => undef
+$show_drip => 1
+$show => undef
+</%args>
+
+<%doc>
+page: <% $page %>
+user: <% $user ? $user->username : '' %> 
+symbol: <% $symbol %>
+tframe: <% $tframe %>
+</%doc>
+
+<div id="leftlink">
+% if ( $page eq 'index' || $page =~ '^all' ) {
+   <a href="chart.mas"><img src="/images/chart.png" width='42' height='35'></a> 
+   <div id ="settingslink"><a href="settings.mas"><img src="/images/settings-icon3.png" height="32"></a></div>
+
+<div id="filterdropdown">
+    <form>
+       Show portfolios: 
+       <select name="show" class="DropDown" onChange="form.submit()">
+          <option value="all" <% $show eq 'all' ? "selected='yes'":'' %>>All</option>
+          <option value="cash" <% $show eq 'cash' ? "selected='yes'":'' %>>Cash</option>
+          <option value="stocks" <% $show eq 'stocks' ? "selected='yes'":'' %>>Stocks</option>
+      </select>
+    </form>
+</div>
+
+<div id="rightlink">
+    <a href="index.mas"> <font <% $page eq 'index'? ' color="red">':'>' %> Home</font></a> |
+    <a href="allholdings.mas"> <font <% $page eq 'allholdings'? ' color="red">':'>' %> Holdings</font></a> |
+    <a href='allperformance.mas'> <font <% $page eq 'allperformance'? ' color="red">':'>' %> Performance</font></a> | 
+    <a href='allfees.mas'> <font <% $page eq 'allfees'? ' color="red">':'>' %> Fees</font></a> | 
+    <a href='alldeposits.mas'> <font <% $page eq 'alldeposits'? ' color="red">':'>' %> Deposits</font></a> | 
+    <a href='alldividends.mas'> <font <% $page eq 'alldividends'? ' color="red">':'>' %> Dividends</font></a> | 
+    <a href='allinterest.mas'> <font <% $page eq 'allinterest'? ' color="red">':'>' %> Interest</font></a> | 
+    <a href='quotes.mas?show=active'> <font <% $page eq 'quotes'? ' color="red">':'>' %> Quotes</font></a> 
+   </div>
+% } elsif ($page eq 'holdings') {
+   <a href="chart.mas?portid=<% $port->id %>"><img src="/images/chart.png" width='42' height='35'></a> 
+% } else {
+   <a href="/ipad"><img src="/images/home.png" width='42' height='31'></a>
+% }
+</div>
+
+<form>
+% if ($port) {
+<select name="portid" class="PortDropdown" onChange="form.submit()">
+<option style="background: black;" value=''>All</option>
+% foreach my $id (keys %$ports ) {
+<option style="background: black" value="<% $id %>" <% $port->id == $id ? 'selected':''%>><% $ports->{$id} %></option>
+%}
+</select>
+<div id="rightlink">
+%  if ( $port->cashonly ) {
+     <a href="holdings.mas?portid=<% $port->id %>">Holdings</a> |
+     <a href="deposits.mas?portid=<% $port->id %>">Deposits</a> |
+% if ($port->currency eq 'GLD') {     
+      <a href=
+     "https://s.tradingview.com/goldprice/widgetembed/?symbol=FX_IDC%3AXAUCAD&interval=1&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=f5f5f5&details=1&studies=&hideideas=1&theme=Black&style=3&timezone=America%2FNew_York&hideideasbutton=1&withdateranges=1&locale=en&utm_source=goldprice.org&utm_medium=widget&utm_campaign=chart&utm_term=FX_IDC%3AXAUCAD"
+     target="new">Gold Chart</a>
+%    }  else {
+        <a href="interest.mas?portid=<% $port->id %>">Interest</a>
+%    }
+%  } else {
+     <a href="holdings.mas?portid=<% $port->id %>&tframe=<% $tframe %> "><font <% $page eq 'holdings'? ' color="red">':'>' %>Holdings</font></a> |
+     <a href="trades.mas?portid=<% $port->id %>"><font <% $page eq 'trades'? ' color="red">':'>' %>Trades</font></a> |
+     <a href="deposits.mas?portid=<% $port->id %>"><font <% $page eq 'deposits'? ' color="red"/>':'>' %>Deposits</font></a> |
+     <a href="dividends.mas?portid=<% $port->id %>"><font <% $page eq 'dividends'? ' color="red"/>':'>' %> Dividends</font></a> |
+     <a href="performance.mas?portid=<% $port->id %>"><font<% $page eq 'performance'? ' color="red">':'>' %> Performance</font></a> |
+     <a href="taxes.mas?portid=<% $port->id %>"><font <% $page eq 'taxes'? ' color="red">':'>' %>Taxes</font></a> 
+% } 
+</div>
+% }
+
+% if ($port && ($port->currency() eq 'GLD')) {
+    GLD: <% sprintf("%8.2f", $port->weight()) %>g
+/<% sprintf("%6.3f", $port->weight()/31.103) %>oz
+    Cur. Value: <% Stocks::Utils::commify($port->curvalue()) %> CAD
+
+% } else {
+<% $port?$port->currency():'' %>  <% Stocks::Utils::commify($curttl) %> 
+<% (abs $daychng>1) ? ' ('. sprintf("%+5.0f", $daychng). ')' : '' %>
+<% 'Cash: $'.Stocks::Utils::commify($cash) %>
+<% ($port && $port->currency ne'CAD')?'Fx: '.sprintf("%8.4f",$port->fx_rate()):'' %>
+%}
+
+<%doc>
+% if ($show_pages{$page}) {
+%  my $pg = $page; $pg =~ s/^all//;
+  <div id="page_header"><% ucfirst($pg) %></div>
+% }
+</%doc>
+
+</form>
+
+% if ($page eq 'trades' || $page eq 'dividends' || $page eq 'deposits' || $page eq 'interest') {
+   <div id="filter_form">
+   <& /show_filter_form.mas, port => $port, tframe => $tframe, show_drip => $show_drip, symbol => $symbol, show_symbols => 1 &>
+  </div>
+  
+  <div id="rightlink2"> 
+% if ( $symbol ) {
+   <a href="quotes.mas?symbol=<% $symbol %> "><% $symbol %> Details</a>
+% }
+  </div>
+% }
+
+% if ($page eq 'alldividends') {
+   <div id="rightlink2"><a href="manageDividends.mas">Manage Dividends</a></div>
+% }
+
+<%doc>
+given ( $page ) {
+#  when ( 'index' )     { print '->all chart; grand total' } 
+#  when ( 'holdings' )  { print 'port total; ->Show trades' } 
+  when ( 'trades' )    { print 'port name; filter_form comp';
+                         if ($symbol) { 
+			     print '->stock details' 
+			 } else { 
+			     print '->show holdings'
+			 }
+		       } 
+  when ( 'editTransaction' )  { print 'edit transaction; ->Show trades' } 
+
+}
+
+</%doc>
+
+<%init>
+use feature 'switch';
+use Stocks::Utils;
+use Stocks::Config qw($CONFIG);;
+
+do{print 'My Stocks'; return} unless $user;
+my $page = $m->request_comp->name;
+$page =~ s/\.mas//;
+if ($page eq 'holdings' ){
+$m->redirect ("/ipad") unless $port;
+}
+
+my ($curttl,$cash,$prevttl,$daychng,$fx_rate);
+my $usdcad = Stocks::Utils::get_usdcad;
+
+$port ||= Stocks::Portfolio::get(id => $portid) if $portid;
+
+if ( $port ) {
+    $curttl = $port->curvalue();     # in portfolio currency
+    $cash = $port->cash();
+
+    $prevttl = $port->getPrevVal();
+    $prevttl /= $port->fx_rate() unless ($port->currency eq 'CAD');  # convert back to portfolio currency
+} else {
+    $curttl = $user->getCurTtlVal();   # in base currency
+    $cash = $user->getCash();
+    $prevttl = $user->getPrevTtlVal();
+}
+$daychng = $curttl - $prevttl;
+
+my %show_pages = ( 'holdings' => 1, 
+		   'trades' => 1, 
+		   'deposits' => 1, 
+		   'quotes' => 1, 
+		   'dividends' =>1, 
+		   'alldividends' => 1,
+		   'managedividends' => 1,
+		   'alldeposits' => 1,
+		   'allfees' => 1,
+		   'fees' => 1,
+		   'alltaxes' => 1,
+		   'allperformance' => 1,
+		   'allholdings' => 1,
+		   'performance' => 1,
+		   'settings' => 1,
+		 );
+
+my $ports = $user->getPortfolios (activeonly => 1);
+</%init>

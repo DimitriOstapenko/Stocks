@@ -1,0 +1,98 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$show_symdiv => undef
+</%args>
+
+<div id="inside">
+
+<table class="mainTable">
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+   <th>This Month</th>
+   <th>Last Month</th>
+   <th>This Quarter</th>
+   <th>Last Quarter</th>
+   <th>This Year</th>
+   <th>Last Year</th>
+</tr>
+</thead>
+
+% my $height = (scalar keys %$ports) * 37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+next unless $port->cashonly();
+$fx_rate = ($port->currency eq 'USD') ? $usdcad : 1;
+
+$monint = $port->getInterest ( tframe => 'mtd' ) * $fx_rate;
+$lmonint = $port->getInterest ( tframe => 'lmo' ) * $fx_rate;
+$qtrint = $port->getInterest ( tframe => 'qtd' ) * $fx_rate;
+$lqtrint = $port->getInterest ( tframe => 'lqtr' ) * $fx_rate;
+$yrint  = $port->getInterest ( tframe => 'ytd' ) * $fx_rate;
+$lyrint = $port->getInterest ( tframe => 'lyr') * $fx_rate;
+$ttlpint = $port->getInterest ( tframe => 'all') * $fx_rate;
+
+$ttlmonint += $monint;
+$ttllmonint += $lmonint;
+$ttlqtrint += $qtrint;
+$ttllqtrint += $lqtrint;
+$ttlyrint += $yrint;
+$ttllyrint += $lyrint;
+$ttlint += $ttlpint;
+
+</%perl>
+
+<tr>
+<td><a href="dividends.mas?portid=<% $port->id %>"<b><% $port->name %></b></a></td>
+<td><% sprintf ("%-8.0f", $monint) %></td>
+<td><% sprintf ("%-8.0f", $lmonint) %></td>
+<td><% sprintf ("%-8.0f", $qtrint) %></td>
+<td><% sprintf ("%-8.0f", $lqtrint) %></td>
+<td><% sprintf ("%-8.0f", $yrint) %></td>
+<td><% sprintf ("%-8.0f", $lyrint) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.0f", $ttlmonint) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllmonint) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlqtrint) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllqtrint) %></td>
+<td>$<% sprintf ("%-8.0f", $ttlyrint) %></td>
+<td>$<% sprintf ("%-8.0f", $ttllyrint) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+Total all-time interest : <b>$<% sprintf("%-8.0f", $ttlint ) %></b> CAD <br>
+
+</div>
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+use List::Util qw[min max];
+
+$m->redirect ('interest.mas?portid='.$portid) if $portid;
+my $USER = $m->comp ('auth.mas');
+
+my ($monint,$lmonint,$qtrint,$lqtrint,$yrint,$lyrint, $ttlpint, $ttlint, $fx_rate,
+    $ttlmonint,$ttllmonint,$ttlqtrint,$ttllqtrint,$ttlyrint,$ttllyrint);
+
+my $usdcad = Stocks::Utils::get_usdcad;
+my $ports = $USER->getPortfolios(activeonly => 1, cashonly => 1);
+
+return unless $ports;
+
+</%init>
+

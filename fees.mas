@@ -1,0 +1,33 @@
+<%args>
+$portid => undef
+$tframe => undef
+$symbol => undef
+
+</%args>
+
+<& /show_filter_form.mas,  port => $port, tframe => $tframe, show_symbols => 0 &>
+
+% if (@$fees) {
+<& show_fees.mas, fees => $fees, othfees => $othfees, portid => $portid &>
+%} else {
+  No transactions found
+%}
+
+
+<%init>
+use Stocks::Portfolio;
+
+my $USER = $m->comp('auth.mas');
+
+$m->redirect('allfees.mas') unless $portid;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+my $fees = $port->getFeesBySymbol ( tframe => $tframe );
+my $othfees = $port->getOtherFees ( tframe => $tframe );
+
+</%init>
+

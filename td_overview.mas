@@ -1,0 +1,13 @@
+<%args>
+$symbol
+$exchange => 'TSX'
+</%args>
+
+<a href='https://research.tdwaterhouse.ca/research/public/Stocks/Overview/<% $exch{$exchange} %>/<% $symbol %>' target='_new'>TD Waterhouse Overview</a><p>
+
+<%init>
+($symbol,$exchange) = split (':', $symbol);
+my %exch = ( 'NASD' => 'us', 'NYSE' => 'us', 'AMEX' => 'us', 'TSX' => 'ca');
+$symbol =~ s/\-/\./g;
+
+</%init>

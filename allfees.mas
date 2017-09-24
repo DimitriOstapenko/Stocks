@@ -1,0 +1,91 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+</%args>
+
+<table class='mainTable'>
+<thead class="Header">
+<tr>
+   <th>Portfolio</th>
+   <th>This Month</th>
+   <th>Last Month</th>
+   <th>This Quarter</th>
+   <th>Last Quarter</th>
+   <th>This Year</th>
+   <th>Last Year</th>
+</tr>
+</thead>
+
+% my $height = min(%$ports*42,360);
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $id ( sort keys %$ports ) {
+<%perl>
+my $port = Stocks::Portfolio::get ( id => $id);
+
+$monfee = $port->getFees ( tframe => 'mtd' );
+$lmonfee = $port->getFees ( tframe => 'lmtd' );
+$qtrfee = $port->getFees ( tframe => 'qtd' ); 
+$lqtrfee = $port->getFees ( tframe => 'lqtr' ); 
+$yrfee  = $port->getFees ( tframe => 'ytd' );
+$lyrfee = $port->getFees ( tframe => 'lyr'); 
+$ttlpfee = $port->getFees ( tframe => 'all');
+
+$ttlmonfee += $monfee;
+$ttllmonfee += $lmonfee;
+$ttlqtrfee += $qtrfee;
+$ttllqtrfee += $lqtrfee;
+$ttlyrfee += $yrfee;
+$ttllyrfee += $lyrfee;
+$ttlfee += $ttlpfee;
+
+</%perl>
+
+<tr>
+<td><a href="fees.mas?portid=<% $id %>"><b><% $port->name %></b></a></td>
+<td><% sprintf ("%-8.2f", $monfee) %></td>
+<td><% sprintf ("%-8.2f", $lmonfee) %></td>
+<td><% sprintf ("%-8.2f", $qtrfee) %></td>
+<td><% sprintf ("%-8.2f", $lqtrfee) %></td>
+<td><% sprintf ("%-8.2f", $yrfee) %></td>
+<td><% sprintf ("%-8.2f", $lyrfee) %></td>
+</tr>
+
+% }
+
+</tbody>
+
+<tfoot class="Footer">
+<tr>
+<td></td>
+<td>$<% sprintf ("%-8.2f", $ttlmonfee) %></td>
+<td>$<% sprintf ("%-8.2f", $ttllmonfee) %></td>
+<td>$<% sprintf ("%-8.2f", $ttlqtrfee) %></td>
+<td>$<% sprintf ("%-8.2f", $ttllqtrfee) %></td>
+<td>$<% sprintf ("%-8.2f", $ttlyrfee) %></td>
+<td>$<% sprintf ("%-8.2f", $ttllyrfee) %></td>
+</tr>
+</tfoot>
+
+</table>
+
+Total all-time fees : <b>$<% sprintf("%-8.0f", $ttlfee ) %></b> CAD
+
+
+<%init>
+use Stocks::User;
+use Stocks::Utils;
+use List::Util qw[min max];
+
+$m->redirect ('fees.mas?portid='.$portid) if $portid;
+my $USER = $m->comp ('auth.mas');
+
+my ($monfee,$lmonfee,$qtrfee,$lqtrfee,$yrfee,$lyrfee, $ttlpfee, $ttlfee, $fx_rate,
+    $ttlmonfee,$ttllmonfee,$ttlqtrfee,$ttllqtrfee,$ttlyrfee,$ttllyrfee);
+
+my $ports = $USER->getPortfolios(activeonly => 1);
+
+return unless $ports;
+
+</%init>
+

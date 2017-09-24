@@ -1,0 +1,23 @@
+
+<span style="float:right">
+<a href="logout.mas"><font size=2>Sign Out</font></a>
+</span>
+
+
+
+<%doc>
+<span style="float:left">
+<a href="/<% $page %>?portid=<% $arg{portid}%>&tframe=<% $arg{tframe} %>&symbol=<% $arg{symbol} %>&exchange=<% $arg{exchange} %>">switch to Desktop version </a> 
+</span>
+
+<span style="float: right">
+Powered by Moose+Mason  </span>
+</%doc>
+
+<%init>
+
+return unless $m->session->{USER};
+my %arg = $m->request_args;
+my $page = $m->request_comp->name;
+
+</%init>

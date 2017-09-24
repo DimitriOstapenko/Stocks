@@ -1,0 +1,53 @@
+<%args>
+</%args>
+
+
+<table class="mainTable" style='width:680px;' align="center">
+<thead class="Header">
+<tr>
+   <th>Symbol</th>
+   <th>Exchange</th>
+   <th>$Amount</th>
+   <th>Frequency</th>
+   <th>
+   <a href="addDiv.mas"><img class="add" src='/images/plus.png' alt='Add' title='Add'> </a>
+   </th>
+</tr>
+</thead>
+
+% my $height =  @$divs*37;
+<tbody class="Content" style="height: <%$height%>"> 
+
+% my $i = 0;
+% foreach my $d ( @$divs ){
+  <tr>
+    <td><% $d->{symbol} %></td>
+    <td><% $d->{exchange} %></td>
+    <td><% sprintf ("%-8.2f", $d->{value}) %></td>
+    <td><% sprintf ("%-4i", $d->{frequency}) %></td>
+    <td><A href='editDiv.mas?id=<% $d->{id} %>'>
+    <img class="edit" src='/images/edit.png'>
+    </a></td>
+  </tr>
+
+% }
+</tbody>
+
+<tfoot class="Footer">
+  <tr>
+  <td></td>
+  <td></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<%init>
+use Stocks::Dividend;
+
+my $class;
+my $divs = Stocks::Dividend::getAll;
+
+</%init>
+
+

@@ -1,0 +1,97 @@
+<%args>
+$tframe 
+</%args>
+
+<%doc>
+tframe: <% $tframe %>
+Deposits : <% $deposits %>
+endval : <% $endval %>
+startval : <% $startval %>
+sdate : <% $range->{sdate} %>
+</%doc>
+
+<div>
+% my $absperf = ($tframe eq 'all') ? ($endval - $deposits)*1000 :($endval - $startval - $deposits)*1000;
+% my $pcperf = ($tframe eq 'all') ? ($endval - $deposits)/$deposits*100 : ($endval - $startval - $deposits )/$startval*100;
+  <div class="chart_title">
+  <% $timeframe{$tframe} %>: <% sprintf("%5.0f",$startval) %>k - <% sprintf("%5.0f",$endval) %>k </div>
+  <div class="chart_title"> -deposits : $<% sprintf ("%+5.0f", $absperf) %> (<% sprintf ("%+5.2f", $pcperf) %>%) 
+  </div>
+  <div class="chart_title">+ deposits: <% sprintf("%+5.0f",($endval-$startval)*1000) %> (<% sprintf("%+5.2f",($endval-$startval)/$startval*100)%>%)</div>
+  <div> <img src='/charts/allperformance.png'> </div>
+</div>
+% return 1;
+
+<%init>
+use Chart::Lines;
+use Stocks::User;
+use Stocks::Utils;
+use Data::Dumper; 
+use Smart::Comments;
+
+$tframe ||= 'all';
+my $USER = $m->comp('auth.mas');
+
+my %timeframe = Stocks::Utils::getTimeFrameNames();
+my $range = Stocks::Utils::getDateRange ($tframe);
+my $totals =  $USER->getTotalPortfolioHist (sdate => $range->{sdate}, edate => $range->{edate}, short_date => 1);
+my $fx_rate;
+my $deposits = int $USER->getDeposits ( tframe => $tframe ) /1000;
+
+# set to dummy chart unless there's data
+$totals = [[ $range->{sdate}, 1000], [$range->{edate}, 1000]] unless @$totals;
+
+my @labels = map {$_->[0]} @$totals;
+my @dataset = map {$_->[1]/1000} @$totals;
+my @data = ( \@labels, \@dataset );
+
+my $startval = $dataset[0];
+#my $endval = $dataset[-1];
+
+my $endval = $USER->getCurTtlVal()/1000;   # in base currency
+
+my $png_width = 650;
+my $png_height = 500;
+
+my $obj = Chart::Lines->new ( $png_width, $png_height );
+
+my %options  = (
+#		'title' => 'Performance '. $timeframe{$tframe},
+#		'title_font' => GD::Font->Small,
+#		'grid_lines' => 'true',
+		'y_grid_lines' => 'true',
+		'x_grid_lines' => 'true',
+		'transparent' => 'true', 
+#		'png_border' => 10, 
+#		'graph_border' => 10, 
+#		'x_label' => 'Time',
+		'y_label' => 'Total Value (in 000)',
+		'label_font' => GD::Font->Large,
+		'tick_label_font' => GD::Font->Large,
+		'legend' => 'none',
+#		'y_axes' => 'both',
+		'precision' => 1,
+		'tick_len' => 4,
+#		'pt_size' => 2,
+		'brush_size' => 4,
+		'grey_background' => 'false',
+		);
+
+$options{'skip_x_ticks'} = int( (scalar @dataset)/4.2);
+
+my $colors = {
+	       'background' => [0,0,0],
+# 	       'title' => [150,150,150],
+	       'text' => [255,255,255],
+	       'x_label' => [150,150,255],
+	       'y_label' => [255,255,255],
+	       'dataset0' => [255,255,255],
+	       'grid_lines' => [178,178,178],
+	     };
+
+$obj->set (%options);
+$obj->set ( colors =>  $colors );
+
+$obj->png ( "/home/stocks/public_html/charts/allperformance.png", \@data );
+
+</%init>

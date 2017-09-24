@@ -1,0 +1,35 @@
+<%args>
+$portid => undef
+$tframe => 'ytd'
+$symbol => undef     # <sym>:<exch> format 
+$show_drip => 1
+</%args>
+
+<& show_trades.mas, trans => $tr, port => $port, symbol => $symbol, tframe => $tframe &>
+
+<%init>
+use Stocks::User;
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+my $USER = $m->comp('auth.mas');
+
+$m->redirect('alltrades.mas') unless $portid;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+$m->redirect("holdings.mas?portid=$portid") if $port->cashonly;
+
+my $tr =  $port->getTrades ( tframe => $tframe, symbol => $symbol, show_drip => $show_drip);
+
+if ($tframe eq 'ytd' and  !@$tr) {
+   $tframe = 'lytd';
+   $tr =  $port->getTrades ( tframe => $tframe, symbol => $symbol, show_drip => $show_drip);
+}
+
+</%init>
+
+

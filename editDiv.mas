@@ -1,0 +1,63 @@
+<%args>
+$id => undef
+$symbol => undef
+$exchange => undef
+$value => undef
+$frequency => undef;
+$delete => undef
+$submit => undef
+</%args>
+
+<div id="main">
+<div id="page_header"> <% $div->symbol %>: Edit Dividend </div> 
+
+<div class="spacer"></div>
+<div class="spacer"></div>
+
+<form>
+<input type='hidden' name='id' value=<% $id %>>
+
+<table>
+<tr><td>Symbol</td><td><input type="text" name="symbol" size=6 class="DropDown" value="<% $div->symbol %>"</td></tr>
+<tr><td>Exchange</td><td><input type="text" name="exchange" size=6 class="DropDown" value="<% $div->exchange %>"</td></tr>
+<tr><td> Cash amount:  </td><td> <input type='text' name='value' size=6 class="DropDown" value="<% $div->value %>"> </td></tr> 
+<tr><td> Frequency:  </td><td> <input type='text' name='frequency' size=6 class="DropDown" value="<% $div->frequency %>"> </td></tr> 
+
+<tr><td>
+<input type="submit" name="submit" value="Submit" class="DropDown">
+</td></tr>
+</table>
+
+<b>Delete this transaction? (Yes/No)</b> 
+<input type='text' name='delete' size=3 maxlength=3 value='No'>
+
+</form>
+</div>
+
+<%init>
+use Stocks::Dividend;
+
+my $USER = $m->comp('auth.mas');
+
+my $div = Stocks::Dividend::get (id => $id);
+
+if ( $submit ) {
+   do{$m->print("symbol is required"); return; } unless $symbol;
+   do{$m->print("exchange is required"); return; } unless $exchange;
+   do{$m->print("dividend amount is required"); return; } unless $value;
+
+   if (uc $delete eq 'YES' ) {
+# delete here
+      $m->redirect ('manageDividends.mas');
+   } else {
+      my $newdiv = Stocks::Dividend->new (symbol => $symbol,
+      					  exchange => $exchange,
+					  value =>$value,
+					  frequency => $frequency
+					 );
+      $newdiv->save;
+      $m->redirect ('manageDividends.mas');
+   }
+}
+
+</%init>

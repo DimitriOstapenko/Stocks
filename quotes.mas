@@ -1,0 +1,63 @@
+<%args>
+$portid => undef
+$symbol => undef
+$exchange => undef
+$tframe => undef
+$show => undef
+</%args>
+
+<div class="spacer"></div>
+<form>
+Symbol: <input name='symbol' size=8 class="Form" value=<% $sym %>>
+
+Exchange: 
+<select name='exchange'  class="Form">
+% while (my ($val,$label) = each %exchange ){
+ <option value='<% $val %>'><% $label %></option>
+%}
+</select>
+<input type='submit' name='submit' value='Go' class="Form">
+</form>
+
+<%perl>
+if ($sym) {
+  my $stat = $m->comp ('quote.mas', symbol => $symbol);
+  return unless $stat;
+  $m->comp ('reuters_overview.mas', symbol => $symbol );
+  $m->comp ('ft_overview.mas', symbol => $symbol );
+  $m->comp ('dc_overview.mas', symbol => $symbol );
+  $m->comp ('company_news.mas', symbol => $symbol );
+  } else {
+  $m->comp ('show_quotes.mas', show => $show);
+#  $m->comp ('/show_news.mas');
+  }  
+</%perl>
+
+
+<%init>
+use Tie::Hash::Indexed;
+use utf8;
+
+my $sym;
+if ($symbol =~ /\:/) {
+   ($sym,$exchange) = split(':', $symbol)
+} else {
+   $sym = $symbol;
+   $symbol = $sym.':'.$exchange;
+}
+$exchange ||= 'TSX';
+
+tie my %exchange, 'Tie::Hash::Indexed';
+%exchange = ('TSX' => 'TSX',
+	     'NASD' => 'NASDAQ',
+	     'NYSE' => 'NYSE',
+	     'AMEX' => 'AMEX',
+	    );
+
+tie my %subhdr, 'Tie::Hash::Indexed';
+%subhdr = ('active' => 'Active Quotes',
+	   'recent' => 'Recent Quotes',
+	   'news' => 'News',
+	  );
+
+</%init>

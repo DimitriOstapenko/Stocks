@@ -1,0 +1,4 @@
+<%init>
+   $m->session->{USER} = undef;
+   $m->redirect ('/ipad');
+</%init>

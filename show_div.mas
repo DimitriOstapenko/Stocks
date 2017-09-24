@@ -1,0 +1,59 @@
+<%args>
+$trans
+$port
+</%args>
+
+<table class="mainTable" style="width:685px" align="center">
+<thead class="Header">
+
+<tr>
+   <th>Date</th>
+   <th>Symbol</th>
+   <th>Amount</th>
+   <th>Note</th>
+   <th><a href="addTransaction2.mas?portid=<% $port->id %>" id="new_trans">
+   <img class="add" src='/images/plus.png' alt='Add' title='Add'> 
+   </a></th>
+</tr>
+</thead>
+
+% my $height = min($trcount*37,360);
+
+<tbody class="Content" style="height: <%$height%>"> 
+
+% my $i = 0;
+% foreach my $t ( @$trans ){
+% $ttlamount += $t->cash; $i++;
+% ($dt) = split (' ', $t->date) if $t->date;
+  <tr>
+    <td><% $dt %></td>
+    <td><% $t->symbol %></td>
+    <td><% sprintf ("%-8.2f", $t->cash) %></td>
+    <td><% $t->descr %></td>
+    <td><A href='editTransaction2.mas?id=<% $t->id %>&portid=<% $port->id %>'>
+    <img class="edit"  src='/images/edit.png'>
+    </a></td>
+  </tr>
+
+% }
+</tbody>
+
+<tfoot class="Footer">
+  <tr>
+  <td></td>
+  <td></td>
+  <td><% sprintf ("%-8.2f", $ttlamount) %></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<%init>
+my ($ttlamount, $dt);
+my $class;
+my $trcount = @$trans;
+use List::Util qw[min max];
+
+</%init>
+
+

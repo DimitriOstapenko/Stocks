@@ -1,0 +1,127 @@
+<%doc>
+Edit Dividend
+</%doc>
+
+<%args>
+$id => undef
+$day => undef
+$mon => undef
+$year => undef
+$symbol => undef
+$number => undef
+$amount => undef
+$submit => undef
+$delete => undef
+</%args>
+
+<div id="main">
+<div id="page_header"> Edit Dividend: </div> <br>
+
+<form>
+<input type='hidden' name='portid' value=<% $portid %>>
+<input type='hidden' name='id' value=<% $id %>>
+
+<table class="mainTable" style="text-align: left; line-height: 2.2em;"> 
+<tr><td> Date: </td>
+<td>
+<select name="mon" class="Form">
+% foreach my $mn ( 1..12 ) {
+    <option value='<% $mn %>'<% ($mn == $tmon)?' selected="yes"':''%>><% $mon[$mn-1] %></option>
+% }
+</select>
+
+<select name='day' class="Form">
+% foreach my $dy ( 1..$days[$tmon-1] ) {
+    <option value='<% $dy %>'<% ($dy == $tday)?' selected="yes"':''%>><% $dy %></option>
+% }
+</select>
+
+<select name='year' class="Form">
+% foreach my $yr ( @years ) {
+   <option value='<% $yr %>'<% ($yr == $tyr)? 'selected="yes"':''%>> <% $yr %> </option>
+% }
+</select>
+
+</td></tr>
+
+<tr>
+<td> Symbol: </td><td> <input type='text' name='symbol' value=<% $tr->symbol %> size=5 class="Form"> </td>
+</tr> 
+
+<tr>
+<td> #Shares:  </td><td><input type='text' name='number' value=<% $tr->number %> size=7 class="Form"></td>
+</tr> 
+
+<tr>
+<td> Amount:  </td><td><input type='text' name='amount' value=<% $tr->cash %> size=7 class="Form"></td>
+</tr> 
+<tr><td>&nbsp;</td></tr>
+<tr>
+<td></td><td><input type="submit" name="submit" value="Submit" class="Form"></td>
+</tr>
+</table>
+
+<p>
+
+<b>Check to delete this transaction: </b> 
+<input type='checkbox' name='delete' value='1'>
+
+</form>
+</div>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Transaction;
+
+my $USER = $m->comp('auth.mas');
+
+my $tr = Stocks::Transaction::get (id => $id);
+my $portid = $tr->portid;
+do{$m->print("transaction $id does not exist"); return} unless $tr;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+
+do{$m->print('Portfolio does not exist'); return} unless $port;
+do{$m->print('you are not authorized to view this portfolio'); return; } unless $port->assert_ownership ( $USER );
+
+my $dtime = $tr->date;
+my ($tdate,$ttime) = split(' ',$dtime);
+my ($tyr,$tmon,$tday) = split ('-', $tdate);
+
+my $symbols = $port->getSymbols(activeOnly => 1, options => 0);
+my $descr = 'Div '. $number . ' ' . $symbol;
+
+my $days = [
+	    {"Jan"=>31}, {"Feb"=>28}, {"Mar"=>31},
+	    {"Apr"=>30}, {"May"=>31}, {"Jun"=>30},
+	    {"Jul"=>31}, {"Aug"=>31}, {"Sep"=>30},
+	    {"Oct"=>31}, {"Nov"=>30}, {"Dec"=>31}
+	   ];
+
+my @mon = map { keys %{$_} } @$days;
+my @days = map { values %{$_} } @$days;
+my @years = ($tyr, $tyr-1, $tyr-2, $tyr-3);
+
+if ($submit) {
+   do { $m->print("please select symbol"); return;} unless $symbol;
+   do { $m->print("please specify the amount"); return;} unless $amount;
+
+   my $datetime = $year .'-'.sprintf("%02d",$mon).'-'.sprintf("%02d",$day).' 00:00:00';
+   if ($delete) {
+      $port->dropTransaction ('tr' => $tr);
+      $m->redirect ('/dividends.mas?portid='.$portid);
+   } else {
+   $port->addTransaction (  id  => $id, 
+   			   'ttype'  => 2,
+			   'symbol' => $symbol,
+                           'number' => $number,
+                           'price'  => $amount,
+                           'date'   => $datetime,
+			   'descr'  => $descr,
+                         ) if $amount;
+ 
+   $m->redirect ('dividends.mas?portid='.$portid);
+   }
+}
+
+</%init>

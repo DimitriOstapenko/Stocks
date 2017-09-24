@@ -1,0 +1,58 @@
+<%args>
+$trans
+$port
+</%args>
+
+<table class="mainTable" style="width:620px;" align="center">
+<thead class="Header">
+
+<tr>
+   <th>Date</th>
+   <th>CAD</th>
+   <th>Note</th>
+   <th><a href="addTransaction3.mas?portid=<% $port->id %>" id="new_trans">
+    <img class="add" src='/images/plus.png' alt='Add' title='Add'></a></th>
+</tr>
+</thead>
+
+% my $height = min($trcount*37,360);
+<tbody class="Content" style="height: <%$height%>"> 
+
+% foreach my $t ( @$trans ){
+%   if ($t->exchange eq 'TSX') {
+%      $usd=0; $cad = $t->cash; $ttlcad += $cad
+%   } else {
+%      $cad=0; $usd = $t->cash; $ttlusd += $usd
+%   }
+% ($dt) = split (' ', $t->date) if $t->date;
+  <tr>
+    <td><% $dt %></td>
+    <td><% $cad ? sprintf ("%-8.2f", $cad) : '-' %></td>
+%#    <td><% $usd ? sprintf ("%-8.2f", $usd) : '-' %></td>
+    <td><% $t->descr || '&nbsp;' %></td>
+    <td><A href='editTransaction3.mas?portid=<% $port->id %>&id=<% $t->id %>'>
+    <img class="edit" src='/images/edit.png' alt='Edit' title='Edit'>
+    </a></td>
+  </tr>
+
+% }
+</tbody>
+
+<tfoot class="Footer">
+  <tr>
+  <td></td>
+  <td><% sprintf ("%-8.0f", $ttlcad) %></td>
+  <td><% sprintf ("%-8.0f", $ttlusd) %></td>
+  </tr>
+</tfoot>
+
+</table>
+
+<%init>
+use List::Util qw[min max];
+my ($cad, $usd, $ttlcad, $ttlusd, $dt, $class);
+my $trcount =  scalar @$trans;
+
+</%init>
+
+

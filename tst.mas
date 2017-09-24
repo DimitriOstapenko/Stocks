@@ -1,0 +1,19 @@
+usdcad : <% $usdcad %>
+gold : <% $gold %>
+fx : <% $port->fx_rate() %>
+curval : <% $ttlcurval %>
+cash : <% $port->cash() %>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::Utils;
+
+my $port = Stocks::Portfolio::get (id=>55);
+
+do {$m->print ("please select portfolio"); return; } unless $port;
+
+my $usdcad = Stocks::Utils::get_usdcad;
+my $gold = Stocks::Utils::get_gold_gr;
+my $ttlcurval = $port->curvalue();
+
+</%init>

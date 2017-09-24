@@ -1,0 +1,13 @@
+<%args>
+$symbol
+</%args>
+
+<a href='http://www.dividendchannel.com/history/?symbol=<% $symbol.'.'.$exch{$exchange} %>' target='_new'>Dividend Channel Overview</a><p>
+
+<%init>
+my $exchange;
+($symbol,$exchange) = split (':', $symbol);
+my %exch = ( 'NASD' => 'us', 'NYSE' => 'us', 'AMEX' => 'us', 'TSX' => 'ca');
+$symbol =~ s/\-/\./g;
+
+</%init>

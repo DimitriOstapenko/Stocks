@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+  </style>
+  <script src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+<body>
+
+<form id="ports">
+<input type="checkbox" name="id"  value="22">
+<input type="checkbox" name="id"  value="23">
+<input type="checkbox" name="id"  value="24">
+</form>
+
+<script>
+
+$('#ports input:checkbox').click( function(e){
+//     var $box = $(this).find(':checkbox');
+//     console.log('test');
+//     $box[0].checked =  !$box[0].checked;
+//     $box.trigger('change');
+//     $box.prop('checked', !$box[0].checked);
+
+//      $(this).prop('checked', !$(this).checked);
+//     toggle_click = !toggle_click;
+//        alert($(this).is(':checked'));
+//	alert($(this).val());
+	alert($(this).prop("name"));
+//	alert ($(this).checked());
+//	alert($(this));
+//      $(this).load("./saveport.pl", { id: $(this).val(), active: $(this).is(':checked')} );
+}
+)
+</script>
+
+</body>
+</html>

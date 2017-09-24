@@ -1,0 +1,24 @@
+<%args>
+$portid => undef
+$tframe => undef
+$symbol => undef
+$exchange => undef
+</%args>
+
+% if  ($port->cashonly()) {
+  <& show_cash_holdings.mas, port => $port &>
+%} else {
+  <& show_holdings.mas, port => $port &>
+%}
+
+
+<%init>
+use Stocks::Portfolio;
+
+my $USER = $m->comp('/auth.mas');
+$m->redirect('allholdings.mas') unless $portid;
+
+my $port = Stocks::Portfolio::get (id => $portid);
+do{$m->print('Portfolio does not exist'); return} unless $port;
+
+</%init>

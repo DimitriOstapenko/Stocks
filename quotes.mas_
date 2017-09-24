@@ -1,0 +1,73 @@
+<%args>
+$portid => undef
+$symbol => undef
+$exchange => undef
+$tframe => undef
+$show => 'active'
+$newscat => 'general'
+</%args>
+
+<div id="page_header">Quotes &amp; Research </div>
+
+<div id='inside'>
+<table width="600px" border="0" cellpadding="0" cellspacing="0" class='scrollTable'>
+
+<tr>
+<td>
+<form>
+<select name="newscat" class="DropDown" onChange="form.submit()">
+<option value=''>Select News category </option>
+% foreach my $cat (@cats) {
+  <option value='<% $cat %>' <% ($cat eq $newscat)?'selected="yes"':'' %> ><% $cat %></option>
+% }
+</select>
+</form>
+</td>
+<td><a href='/quotes.mas?show=active&portid=<% $portid %>'>Show Active Quotes</a></td>
+
+</table>
+
+<div class="spacer"></div>
+<quote_form>
+<form>
+<quote_form_td>
+Symbol: <input name='symbol' size=8 class="DropDown">
+
+Exchange: 
+<select name='exchange'  class="DropDown">
+% while (my ($val,$label) = each %exchange ){
+ <option value='<% $val %>'><% $label %></option>
+%}
+</select>
+<input type='submit' name='submit' value='Go' class="DropDown">
+</quote_form_td>
+</form>
+</quote_form>
+
+<%perl>
+if ($symbol) {
+  $m->comp ('/quote.mas', symbol => $symbol, exchange => $exchange);
+  $m->comp ('/td_overview.mas', symbol => $symbol, exchange => $exchange);
+  $m->comp ('/company_news.mas', symbol => $symbol, exchange => $exchange);
+} elsif ($show) {
+  $m->comp ('/show_quotes.mas', show => $show, port => $port);
+} else {
+}  
+  $m->comp ('/show_news.mas', cat => $newscat);
+</%perl>
+
+</div>
+
+<%init>
+use Tie::Hash::Indexed;
+
+my $port = Stocks::Portfolio::get (id => $portid) if $portid;
+tie my %exchange, 'Tie::Hash::Indexed';
+%exchange = ('TSX' => 'TSX',
+	     'NASD' => 'NASDAQ',
+	     'NYSE' => 'NYSE',
+	     'AMEX' => 'AMEX',
+	    );
+
+my @cats = qw(General US Gold Banks Oil&Gas);
+</%init>

@@ -1,0 +1,83 @@
+<%args>
+$name => undef
+$brokerid => undef
+$currency => undef
+$cashin_base => undef
+$cashonly => '0'
+$submit => undef
+</%args>
+
+
+<form>
+<table class="mainTable" style="text-align: left; line-height: 2.5em; width:450px"> 
+<tr><td> Currency: </td>
+<td>
+<input type='radio' name='currency' value="CAD" checked>CAD
+<input type='radio' name='currency' value="USD">USD
+<input type='radio' name='currency' value="EUR">EUR
+<input type='radio' name='currency' value="GLD">GLD
+</td>
+</tr>
+
+<tr>
+<td> Name: </td>
+<td><input type="text" name="name" size=15> </td>
+</tr>
+
+<tr>
+<td> Broker: </td>
+<td> 
+<select name="brokerid" class="DropDown">
+% foreach my $id (sort keys %$brokers ){
+      <option value=<% $id %>> <% $$brokers{$id} %></option>
+% }
+</select>
+
+</td>
+</tr>
+
+<tr>
+<td> Cash In: </td>
+<td> <input type="text" name="cashin_base" size=5> </td>
+</tr>
+
+<tr> <td>Check if Cash Only portfolio </td><td><input type="checkbox" name="cashonly" value='1'> </td></tr>
+
+<tr> <td></td> <td><input type="submit" name="submit" value="Submit" class="Form"></td></tr>
+</table>
+
+<%init>
+use Stocks::Portfolio;
+use Stocks::User;
+use Stocks::Transaction;
+use Stocks::Broker;
+use DateTime;
+
+my $USER = $m->comp('auth.mas');
+my $brokers  = Stocks::Broker::getAll();
+
+if ($submit) {
+   my $ts = DateTime->now(time_zone => 'local');
+   my $port = Stocks::Portfolio->new( 
+                                name         => $name, 
+				brokerid     => $brokerid,
+                                username     => $USER->username,
+                                currency     => $currency,
+				cashin_base  => $cashin_base,
+				cashonly     => $cashonly
+                               );
+   $port->save;
+
+   $port->addTransaction ( 'ttype'  =>  0,
+                           'symbol' => 'cash',
+                           'number' => $cashin_base,
+                           'price'  => 1,
+                           'date'   => $ts->ymd.' '.$ts->hms,
+                           'descr'  => 'initial deposit'
+                         );
+
+
+   $m->redirect('/ipad');
+}
+
+</%init>
