@@ -26,13 +26,13 @@ $CONFIG =
           mdb => {   						# MySQL
                  dsn => "DBI:mysql:stocks:localhost",
                  user => 'root',
-                 pass => 'musia59'
+                 pass => ''
                  },
 	  db => {						# Pg
 
 	        dsn => 'dbi:Pg:dbname=stocks;host=localhost',
         	user => 'stocks',
-        	pass =>  'musia59',
+        	pass =>  '',
         	options => { ShowErrorStatement => 0, # append stmt text details to error message in die() or warn()
                 	     RaiseError => 0, # don't die on errors
                      	     PrintError => 0, # warn() on errors
