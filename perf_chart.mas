@@ -6,7 +6,7 @@ $port => undef
 
 <%doc>
 Create year graph if year is passed
-Creater month graph if month and year are passed
+Create month graph if month and year are passed
 Show 12 month back from now by default
 Show portfolio graph if $port is set, all portfolios otherwise
 </%doc>
